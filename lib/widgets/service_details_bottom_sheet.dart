@@ -16,17 +16,27 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
         children: [
           Text(
             '${service['label']} Services',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           SizedBox(height: 8),
           Text(
             'Average ETA: 40 mins.',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
           ),
           SizedBox(height: 16),
           Text(
-            'Need a hand making your home sparkle? Book top-rated cleaners with just a tap and enjoy a spotless home effortlessly!',
-            style: TextStyle(color: Colors.white, fontSize: 14),
+            service['description'] ?? 'No description available.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+            ),
           ),
           SizedBox(height: 24),
           SizedBox(
@@ -35,16 +45,21 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orange,
                 padding: EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onPressed: () {
-                Navigator.pop(context); // Close the bottom sheet first
+                Navigator.pop(context); // Close the bottom sheet
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => BookingScreen()),
                 );
               },
-              child: Text('Proceed', style: TextStyle(fontSize: 16, color: Colors.white)),
+              child: Text(
+                'Proceed',
+                style: TextStyle(fontSize: 16, color: Colors.white),
+              ),
             ),
           ),
         ],
