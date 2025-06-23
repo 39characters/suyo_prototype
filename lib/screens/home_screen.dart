@@ -97,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               backgroundColor: Color(0xFF4B2EFF),
                               builder: (_) {
                                 return ServiceDetailsBottomSheet(
-                                  service: services[index],
+                                  service: service,
                                 );
                               },
                             );
@@ -123,8 +123,82 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildReceipts() => Center(child: Text("📟 Receipts screen (mock)", style: TextStyle(fontSize: 16)));
-  Widget _buildChatLogs() => Center(child: Text("💬 Chat logs screen (mock)", style: TextStyle(fontSize: 16)));
+  Widget _buildReceipts() => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Your Receipts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF3A22CC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.receipt_long, color: Colors.white),
+                title: Text("Laundry Service - ₱500", style: TextStyle(color: Colors.white)),
+                subtitle: Text("June 15, 2025 - Completed", style: TextStyle(color: Colors.white70)),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                onTap: () {},
+              ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF3A22CC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.receipt_long, color: Colors.white),
+                title: Text("Pet Sitting - ₱300", style: TextStyle(color: Colors.white)),
+                subtitle: Text("June 10, 2025 - Completed", style: TextStyle(color: Colors.white70)),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+      );
+
+  Widget _buildChatLogs() => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Your Chats", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            SizedBox(height: 16),
+            Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF3A22CC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text("Anna's Cleaners", style: TextStyle(color: Colors.white)),
+                subtitle: Text("Thanks again for booking with us!", style: TextStyle(color: Colors.white70)),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                onTap: () {},
+              ),
+            ),
+            SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Color(0xFF3A22CC),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: ListTile(
+                leading: CircleAvatar(child: Icon(Icons.person)),
+                title: Text("Kuya Jon's Service", style: TextStyle(color: Colors.white)),
+                subtitle: Text("On the way now.", style: TextStyle(color: Colors.white70)),
+                trailing: Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+      );
+
   Widget _buildProfile() => Center(child: Text("👤 Profile screen (mock)", style: TextStyle(fontSize: 16)));
 
   @override
@@ -146,6 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(icon: Icon(Icons.share), onPressed: () {}, color: Colors.white),
         ],
       ),
+      backgroundColor: Color(0xFF4B2EFF),
       body: IndexedStack(index: _selectedTab, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.white,

@@ -3,6 +3,7 @@ import 'screens/home_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/job_in_progress_screen.dart';
 import 'screens/rating_screen.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(SuyoApp());
@@ -19,8 +20,7 @@ class SuyoApp extends StatelessWidget {
         scaffoldBackgroundColor: Color(0xFF4B2EFF),
         fontFamily: 'Roboto',
       ),
-      home: HomeScreen(),
-
+      home: LoginScreen(),
       routes: {
         '/booking': (context) => BookingScreen(),
         '/inprogress': (context) => JobInProgressScreen(),

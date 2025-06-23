@@ -175,7 +175,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                         children: [
                                           Icon(Icons.star,
                                               size: 16,
-                                              color: Colors.orange),
+                                              color: Color(0xFFF56D16)),
                                           SizedBox(width: 4),
                                           Text("${p['rating']}")
                                         ],
