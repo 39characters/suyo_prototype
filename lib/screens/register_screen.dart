@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'home_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -8,10 +8,17 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _isLoading = false;
+  String _userType = "Customer";
+
+  bool _showPassword = false;
+  bool _showConfirmPassword = false;
 
   void _register() async {
     if (_passwordController.text != _confirmPasswordController.text) {
@@ -24,13 +31,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+
+      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
+        'firstName': _firstNameController.text.trim(),
+        'lastName': _lastNameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'userType': _userType,
+        'createdAt': Timestamp.now(),
+      });
+
+      Navigator.pop(context);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Account created! Please log in.")),
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -56,26 +73,66 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 24),
                 Image.asset('assets/images/SUYO_LOGO.png', height: 60),
                 SizedBox(height: 12),
-                Text(
-                  "Join us",
-                  style: TextStyle(fontSize: 14, color: Colors.white),
-                ),
                 RichText(
                   text: TextSpan(
-                    text: "Create an account",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFFF56D16),
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16),
+                    children: [
+                      TextSpan(
+                        text: "Create ",
+                        style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: "an account!",
+                        style: TextStyle(color: Color(0xFFC7C7C7)),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(height: 32),
-                _buildTextField(Icons.email_outlined, "Email", _emailController, false),
+                _buildTextField(Icons.person_outline, "First Name", _firstNameController),
                 SizedBox(height: 16),
-                _buildTextField(Icons.lock_outline, "Password", _passwordController, true),
+                _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
                 SizedBox(height: 16),
-                _buildTextField(Icons.lock_outline, "Confirm Password", _confirmPasswordController, true),
+                _buildTextField(Icons.email_outlined, "Email", _emailController),
+                SizedBox(height: 16),
+                _buildPasswordField(
+                  icon: Icons.lock_outline,
+                  hint: "Password",
+                  controller: _passwordController,
+                  isObscured: !_showPassword,
+                  toggleVisibility: () => setState(() => _showPassword = !_showPassword),
+                ),
+                SizedBox(height: 16),
+                _buildPasswordField(
+                  icon: Icons.lock_outline,
+                  hint: "Confirm Password",
+                  controller: _confirmPasswordController,
+                  isObscured: !_showConfirmPassword,
+                  toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ChoiceChip(
+                      label: Text('Customer'),
+                      selected: _userType == "Customer",
+                      onSelected: (selected) => setState(() => _userType = "Customer"),
+                      selectedColor: Color(0xFFF56D16),
+                      labelStyle: TextStyle(color: Colors.white),
+                      backgroundColor: Color(0xFF3A22CC),
+                    ),
+                    SizedBox(width: 12),
+                    ChoiceChip(
+                      label: Text('Service Provider'),
+                      selected: _userType == "Service Provider",
+                      onSelected: (selected) => setState(() => _userType = "Service Provider"),
+                      selectedColor: Color(0xFFF56D16),
+                      labelStyle: TextStyle(color: Colors.white),
+                      backgroundColor: Color(0xFF3A22CC),
+                    ),
+                  ],
+                ),
                 SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -84,9 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFF56D16),
                       padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                     child: _isLoading
                         ? CircularProgressIndicator(color: Colors.white)
@@ -97,10 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 RichText(
                   text: TextSpan(
                     children: [
-                      TextSpan(
-                        text: "Already have an account? ",
-                        style: TextStyle(color: Colors.white),
-                      ),
+                      TextSpan(text: "Already have an account? ", style: TextStyle(color: Colors.white)),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () => Navigator.pop(context),
@@ -112,7 +164,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -121,13 +173,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(IconData icon, String hint, TextEditingController controller, bool obscure) {
+  Widget _buildTextField(IconData icon, String hint, TextEditingController controller) {
     return TextField(
       controller: controller,
-      obscureText: obscure,
       style: TextStyle(color: Colors.white),
       decoration: InputDecoration(
         prefixIcon: Icon(icon, color: Color(0xFFF56D16)),
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.white70),
+        filled: true,
+        fillColor: Color(0xFF3A22CC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordField({
+    required IconData icon,
+    required String hint,
+    required TextEditingController controller,
+    required bool isObscured,
+    required VoidCallback toggleVisibility,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: isObscured,
+      style: TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        prefixIcon: Icon(icon, color: Color(0xFFF56D16)),
+        suffixIcon: IconButton(
+          icon: Icon(
+            isObscured ? Icons.visibility_off : Icons.visibility,
+            color: Color(0xFFC7C7C7).withOpacity(0.65),
+          ),
+          onPressed: toggleVisibility,
+        ),
         hintText: hint,
         hintStyle: TextStyle(color: Colors.white70),
         filled: true,

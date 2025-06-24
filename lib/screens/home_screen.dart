@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_details_bottom_sheet.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -199,7 +201,53 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
 
-  Widget _buildProfile() => Center(child: Text("👤 Profile screen (mock)", style: TextStyle(fontSize: 16)));
+  Widget _buildProfile() {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(user?.uid).get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Center(child: CircularProgressIndicator(color: Colors.white));
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return Center(child: Text("User data not found", style: TextStyle(color: Colors.white)));
+        }
+
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final fullName = "${data['firstName']} ${data['lastName']}";
+
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.person, size: 72, color: Colors.white70),
+              SizedBox(height: 16),
+              Text(
+                fullName,
+                style: TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacementNamed(context, '/');
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFFF56D16),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                ),
+                child: Text("Sign Out", style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {

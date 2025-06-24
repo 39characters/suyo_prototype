@@ -8,6 +8,7 @@ import 'screens/job_in_progress_screen.dart';
 import 'screens/rating_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/provider_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,7 @@ class SuyoApp extends StatelessWidget {
         '/rate': (context) => RatingScreen(),
         '/home': (context) => HomeScreen(),
         '/register': (context) => RegisterScreen(),
+        '/providerHome': (context) => ProviderHomeScreen(),
       },
     );
   }
