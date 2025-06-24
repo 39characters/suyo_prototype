@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "281983169706",
+    "project_id": "suyo-prototype-bd29f",
+    "storage_bucket": "suyo-prototype-bd29f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:281983169706:android:c8e9d1d6feff1857c44cd3",
+        "android_client_info": {
+          "package_name": "com.example.suyo_prototype"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBZDJ6RLFo-bi9Aq9AnXGy68VGd2Luf0us"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

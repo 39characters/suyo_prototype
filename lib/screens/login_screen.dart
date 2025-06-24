@@ -76,7 +76,8 @@ class LoginScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      // Example: Navigator.pushReplacementNamed(context, '/home');
+                      // TODO: Add authentication logic here
+                      // Navigator.pushReplacementNamed(context, '/home');
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Color(0xFFF56D16),
@@ -96,9 +97,17 @@ class LoginScreen extends StatelessWidget {
                         text: "Don't have an account? ",
                         style: TextStyle(color: Colors.white),
                       ),
-                      TextSpan(
-                        text: "Create an account",
-                        style: TextStyle(color: Color(0xFFF56D16)),
+                      WidgetSpan(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/register'),
+                          child: Text(
+                            "Create an account",
+                            style: TextStyle(
+                              color: Color(0xFFF56D16),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

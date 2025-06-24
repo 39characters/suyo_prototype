@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart'; // ← newly generated file
+
 import 'screens/home_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/job_in_progress_screen.dart';
 import 'screens/rating_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/register_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform, // ← required for web & all platforms
+  );
   runApp(SuyoApp());
 }
 
@@ -26,6 +34,7 @@ class SuyoApp extends StatelessWidget {
         '/inprogress': (context) => JobInProgressScreen(),
         '/rate': (context) => RatingScreen(),
         '/home': (context) => HomeScreen(),
+        '/register': (context) => RegisterScreen(),
       },
     );
   }

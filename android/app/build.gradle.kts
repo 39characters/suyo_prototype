@@ -3,6 +3,7 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") version "4.4.2" apply false
 }
 
 android {
@@ -37,6 +38,22 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+}
+
+buildscript {
+    dependencies {
+        // Add this line below existing dependencies
+        classpath("com.google.gms:google-services:4.3.15")
+    }
+}
+
+dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:33.15.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-analytics")
+    // Add more here, like:
+    // implementation("com.google.firebase:firebase-auth")
+    // implementation("com.google.firebase:firebase-firestore")
 }
 
 flutter {
