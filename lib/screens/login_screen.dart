@@ -26,16 +26,21 @@ class _LoginScreenState extends State<LoginScreen> {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists) {
-        final userType = userDoc['userType'];
+        final userData = userDoc.data();
+        if (userData == null || !userData.containsKey('userType')) {
+          throw Exception('Your account is registered but missing profile data. Contact support.');
+        }
+
+        final userType = userData['userType'];
         if (userType == 'Customer') {
           Navigator.pushReplacementNamed(context, '/home');
         } else if (userType == 'Service Provider') {
           Navigator.pushReplacementNamed(context, '/providerHome');
         } else {
-          throw Exception('Unknown user type');
+          throw Exception('Unknown user type: $userType');
         }
       } else {
-        throw Exception('User profile not found');
+        throw Exception('No matching profile found. Please register first.');
       }
     } on FirebaseAuthException catch (e) {
       String message = 'Wrong credentials. Please try again.';
@@ -43,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.code == 'wrong-password') message = 'Incorrect password.';
       _showErrorDialog(message);
     } catch (e) {
-      _showErrorDialog(e.toString());
+      _showErrorDialog(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       setState(() => _isLoading = false);
     }
@@ -53,9 +58,9 @@ class _LoginScreenState extends State<LoginScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Text("Login Error"),
+        title: const Text("Login Error"),
         content: Text(message),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
       ),
     );
   }
@@ -173,14 +178,17 @@ class _LoginScreenState extends State<LoginScreen> {
       obscureText: obscure ? !_showPassword : false,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
-        prefixIcon: Icon(icon, color: const Color(0xFFF56D16)),
+        prefixIcon: Padding(
+          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+          child: Icon(icon, color: const Color(0xFFF56D16)),
+        ),
         hintText: hint,
         hintStyle: const TextStyle(color: Colors.white70),
         filled: true,
         fillColor: const Color(0xFF3A22CC),
         suffixIcon: obscure
             ? Padding(
-                padding: const EdgeInsets.only(right: 8.0), // 👈 shifts icon left
+                padding: const EdgeInsets.only(right: 8.0),
                 child: IconButton(
                   icon: Icon(
                     _showPassword ? Icons.visibility_off : Icons.visibility,

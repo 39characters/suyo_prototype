@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class BookingScreen extends StatefulWidget {
+  final String serviceCategory;
+  final double price;
+
+  const BookingScreen({
+    required this.serviceCategory,
+    required this.price,
+  });
+
   @override
   _BookingScreenState createState() => _BookingScreenState();
 }
@@ -11,30 +20,7 @@ class _BookingScreenState extends State<BookingScreen> {
   GoogleMapController? _mapController;
   LatLng? _userLocation;
   Map<String, dynamic>? _selectedProvider;
-
-  final List<Map<String, dynamic>> nearbyProviders = [
-    {
-      "name": "Anna's Cleaners",
-      "lat": 14.5995,
-      "lng": 120.9842,
-      "eta": "15 min",
-      "rating": 4.8,
-    },
-    {
-      "name": "Kuya Jon's Service",
-      "lat": 14.6002,
-      "lng": 120.9835,
-      "eta": "10 min",
-      "rating": 4.5,
-    },
-    {
-      "name": "Criselda Home Care",
-      "lat": 14.5989,
-      "lng": 120.9857,
-      "eta": "12 min",
-      "rating": 4.7,
-    },
-  ];
+  List<Map<String, dynamic>> nearbyProviders = [];
 
   @override
   void initState() {
@@ -44,11 +30,58 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _getUserLocation() async {
     await Geolocator.requestPermission();
-    final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high);
+    final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
     setState(() {
       _userLocation = LatLng(pos.latitude, pos.longitude);
     });
+    await _fetchProviders();
+  }
+
+  Future<void> _fetchProviders() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('userType', isEqualTo: 'Service Provider')
+        .where('serviceCategory', isEqualTo: widget.serviceCategory)
+        .get();
+
+    final results = snapshot.docs.map((doc) {
+      final data = doc.data();
+      final lat = data['lat'];
+      final lng = data['lng'];
+
+      if (lat == null || lng == null) return null;
+
+      return {
+        "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
+        "lat": lat.toDouble(),
+        "lng": lng.toDouble(),
+        "eta": "10 min",
+        "rating": data['rating'] != null ? (data['rating'] as num).toDouble() : 4.5,
+      };
+    }).whereType<Map<String, dynamic>>().toList();
+
+    if (results.isEmpty) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("No Providers Found"),
+          content: Text(
+            "No current available services for '${widget.serviceCategory}'. Please try again later.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // close dialog
+                Navigator.pop(context); // go back to home
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } else {
+      setState(() => nearbyProviders = results);
+    }
   }
 
   Set<Marker> _buildMarkers() {
@@ -68,10 +101,9 @@ class _BookingScreenState extends State<BookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _userLocation == null
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                // Full-screen Google Map
                 Positioned.fill(
                   child: GoogleMap(
                     initialCameraPosition: CameraPosition(
@@ -86,17 +118,14 @@ class _BookingScreenState extends State<BookingScreen> {
                     markers: _buildMarkers(),
                   ),
                 ),
-
-                // Grab-style bottom panel
                 Positioned(
                   bottom: 0,
                   left: 0,
                   right: 0,
                   child: Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.white,
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black26,
@@ -104,7 +133,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                       ],
                     ),
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     height: 280,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,17 +148,19 @@ class _BookingScreenState extends State<BookingScreen> {
                             ),
                           ),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         Text(
                           "Nearby Providers",
-                          style: TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Expanded(
                           child: ListView.separated(
                             itemCount: nearbyProviders.length,
-                            separatorBuilder: (_, __) => Divider(height: 16),
+                            separatorBuilder: (_, __) => const Divider(height: 16),
                             itemBuilder: (context, index) {
                               final p = nearbyProviders[index];
                               final isSelected = _selectedProvider == p;
@@ -141,43 +172,35 @@ class _BookingScreenState extends State<BookingScreen> {
                                   });
                                 },
                                 child: Container(
-                                  padding: EdgeInsets.symmetric(vertical: 8),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: isSelected
-                                        ? Color(0xFFEDEBFF)
-                                        : Colors.transparent,
+                                    color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             p['name'],
                                             style: TextStyle(
                                               fontWeight: FontWeight.w600,
-                                              color: isSelected
-                                                  ? Color(0xFF4B2EFF)
-                                                  : Colors.black,
+                                              color: isSelected ? const Color(0xFF4B2EFF) : Colors.black,
                                             ),
                                           ),
                                           Text(
                                             "ETA: ${p['eta']}",
-                                            style: TextStyle(fontSize: 12),
+                                            style: const TextStyle(fontSize: 12),
                                           ),
                                         ],
                                       ),
                                       Row(
                                         children: [
-                                          Icon(Icons.star,
-                                              size: 16,
-                                              color: Color(0xFFF56D16)),
-                                          SizedBox(width: 4),
-                                          Text("${p['rating']}")
+                                          const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
+                                          const SizedBox(width: 4),
+                                          Text("${p['rating']}"),
                                         ],
                                       )
                                     ],
@@ -187,7 +210,7 @@ class _BookingScreenState extends State<BookingScreen> {
                             },
                           ),
                         ),
-                        SizedBox(height: 12),
+                        const SizedBox(height: 12),
                         ElevatedButton(
                           onPressed: _selectedProvider == null
                               ? null
@@ -195,7 +218,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   showDialog(
                                     context: context,
                                     barrierDismissible: false,
-                                    builder: (_) => AlertDialog(
+                                    builder: (_) => const AlertDialog(
                                       content: Row(
                                         children: [
                                           CircularProgressIndicator(),
@@ -206,21 +229,19 @@ class _BookingScreenState extends State<BookingScreen> {
                                     ),
                                   );
 
-                                  await Future.delayed(Duration(seconds: 2));
+                                  await Future.delayed(const Duration(seconds: 2));
                                   Navigator.pop(context);
 
                                   Navigator.pushNamed(context, "/inprogress");
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _selectedProvider == null
-                                ? Colors.grey
-                                : Color(0xFF4B2EFF),
-                            minimumSize: Size.fromHeight(45),
+                            backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
+                            minimumSize: const Size.fromHeight(45),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
+                          child: const Text(
                             "Request Service",
                             style: TextStyle(color: Colors.white),
                           ),

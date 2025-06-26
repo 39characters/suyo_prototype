@@ -8,6 +8,10 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String label = service['label'] ?? 'Service';
+    final String description = service['description'] ?? 'No description available.';
+    final double? price = service['price'] != null ? (service['price'] as num).toDouble() : null;
+
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -15,48 +19,60 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '${service['label']} Services',
-            style: TextStyle(
+            '$label Services',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 8),
-          Text(
+          const SizedBox(height: 8),
+          const Text(
             'Average ETA: 40 mins.',
             style: TextStyle(
               color: Colors.white70,
               fontSize: 16,
             ),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Text(
-            service['description'] ?? 'No description available.',
-            style: TextStyle(
+            description,
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 14,
             ),
           ),
-          SizedBox(height: 24),
+          const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFF56D16),
-                padding: EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: const Color(0xFFF56D16),
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
               onPressed: () {
+                if (price == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("This service is missing a price.")),
+                  );
+                  return;
+                }
+
                 Navigator.pop(context); // Close the bottom sheet
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => BookingScreen()),
+                  MaterialPageRoute(
+                    builder: (_) => BookingScreen(
+                      serviceCategory: label,
+                      price: price,
+                    ),
+                  ),
                 );
               },
-              child: Text(
+              child: const Text(
                 'Proceed',
                 style: TextStyle(fontSize: 16, color: Colors.white),
               ),
