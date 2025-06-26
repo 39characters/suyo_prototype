@@ -91,20 +91,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 32),
-                _buildTextField(
-                  icon: Icons.person_outline,
-                  hint: "Email",
-                  obscure: false,
-                  controller: _emailController,
-                ),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: _buildTextField(
+                      icon: Icons.person_outline,
+                      hint: "Email",
+                      obscure: false,
+                      controller: _emailController,
+                    ),
+                  ),
+
                 const SizedBox(height: 16),
-                _buildTextField(
-                  icon: Icons.lock_outline,
-                  hint: "Password",
-                  obscure: true,
-                  controller: _passwordController,
-                ),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: _buildTextField(
+                      icon: Icons.lock_outline,
+                      hint: "Password",
+                      obscure: true,
+                      controller: _passwordController,
+                    ),
+                  ),
+                
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -126,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  width: double.infinity,
+                  width: MediaQuery.of(context).size.width * 0.75,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(

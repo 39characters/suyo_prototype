@@ -140,29 +140,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 32),
                 if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
-                  _buildTextField(Icons.person_outline, "First Name", _firstNameController),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: _buildTextField(Icons.person_outline, "First Name", _firstNameController),
+                  ),
                   SizedBox(height: 16),
-                  _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
-                ] else if (_isBusinessNameRequired) ...[
-                  _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
+                  ),
+                ]
+                else if (_isBusinessNameRequired) ...[
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
+                  ),
                 ],
                 SizedBox(height: 16),
-                _buildTextField(Icons.email_outlined, "Email", _emailController),
-                SizedBox(height: 16),
-                _buildPasswordField(
-                  icon: Icons.lock_outline,
-                  hint: "Password",
-                  controller: _passwordController,
-                  isObscured: !_showPassword,
-                  toggleVisibility: () => setState(() => _showPassword = !_showPassword),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: _buildTextField(Icons.email_outlined, "Email", _emailController),
                 ),
                 SizedBox(height: 16),
-                _buildPasswordField(
-                  icon: Icons.lock_outline,
-                  hint: "Confirm Password",
-                  controller: _confirmPasswordController,
-                  isObscured: !_showConfirmPassword,
-                  toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: _buildPasswordField(
+                    icon: Icons.lock_outline,
+                    hint: "Password",
+                    controller: _passwordController,
+                    isObscured: !_showPassword,
+                    toggleVisibility: () => setState(() => _showPassword = !_showPassword),
+                  ),
+                ),
+                SizedBox(height: 16),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: _buildPasswordField(
+                    icon: Icons.lock_outline,
+                    hint: "Confirm Password",
+                    controller: _confirmPasswordController,
+                    isObscured: !_showConfirmPassword,
+                    toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                  ),
                 ),
                 SizedBox(height: 24),
                 Row(
@@ -194,42 +213,47 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 if (_userType == "Service Provider") ...[
                   SizedBox(height: 16),
-                  InputDecorator(
-                    decoration: InputDecoration(
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-                        child: Icon(Icons.business_center, color: Color(0xFFF56D16)),
+                  SizedBox(
+                    height: 50,
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+                          child: Icon(Icons.business_center, color: Color(0xFFF56D16)),
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFF3A22CC),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      filled: true,
-                      fillColor: Color(0xFF3A22CC),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: _selectedServiceCategory,
-                        isExpanded: true,
-                        iconEnabledColor: Colors.white70,
-                        dropdownColor: Color(0xFF3A22CC),
-                        style: TextStyle(color: Colors.white, fontSize: 16),
-                        hint: Text("Select Service Category", style: TextStyle(color: Colors.white70)),
-                        items: _serviceCategories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedServiceCategory = value;
-                          });
-                        },
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedServiceCategory,
+                          isExpanded: true,
+                          iconEnabledColor: Colors.white70,
+                          dropdownColor: Color(0xFF3A22CC),
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          hint: Text("Select Service Category", style: TextStyle(color: Colors.white70)),
+                          items: _serviceCategories.map((category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Text(category),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedServiceCategory = value;
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ],
+
                 if (_needsLocationPin) ...[
                   SizedBox(height: 16),
                   ElevatedButton.icon(
@@ -248,7 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ],
                 SizedBox(height: 24),
                 SizedBox(
-                  width: double.infinity,
+                  width: MediaQuery.of(context).size.width * 0.75,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _register,
                     style: ElevatedButton.styleFrom(
