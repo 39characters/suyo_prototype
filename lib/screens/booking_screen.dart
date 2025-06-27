@@ -1,3 +1,4 @@
+// same imports...
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -119,7 +120,21 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
-  Set<Marker> _buildMarkers() => {};
+  Set<Marker> _buildMarkers() {
+    return filteredProviders.map((p) {
+      return Marker(
+        markerId: MarkerId(p['name']),
+        position: LatLng(p['lat'], p['lng']),
+        infoWindow: InfoWindow(
+          title: p['name'],
+          snippet: 'ETA: ${p['eta']} (${p['distance']} km)',
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(
+          BitmapDescriptor.hueOrange,
+        ),
+      );
+    }).toSet();
+  }
 
   void _onCameraMove(CameraPosition position) {
     _centerLocation = position.target;
@@ -157,7 +172,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   markers: _buildMarkers(),
                 ),
 
-                // 📍 Raised Location Pin
+                // Center pin shifted upward (visually only)
                 Positioned(
                   top: MediaQuery.of(context).size.height * 0.31,
                   left: MediaQuery.of(context).size.width / 2 - 25,
@@ -166,7 +181,7 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
 
-                // 📦 Bottom Sheet
+                // Bottom details
                 Positioned(
                   bottom: 0,
                   left: 0,
