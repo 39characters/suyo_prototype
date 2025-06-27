@@ -61,31 +61,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
             'Pick your Business Location',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: double.maxFinite,
-                height: 300,
-                child: Stack(
-                  children: [
-                    GoogleMap(
-                      onMapCreated: _onMapCreated,
-                      initialCameraPosition: CameraPosition(target: tempSelected, zoom: 15),
-                      onCameraMove: (position) => tempSelected = position.target,
-                      myLocationEnabled: true,
-                      myLocationButtonEnabled: true,
-                      zoomControlsEnabled: false,
-                      mapToolbarEnabled: false,
-                    ),
-                    Align(
-                      alignment: Alignment.center,
-                      child: Icon(Icons.location_on, size: 48, color: Color(0xFFF56D16)),
-                    ),
-                  ],
+          content: SizedBox(
+            width: double.maxFinite,
+            height: 300,
+            child: Stack(
+              children: [
+                GoogleMap(
+                  onMapCreated: _onMapCreated,
+                  initialCameraPosition: CameraPosition(target: tempSelected, zoom: 15),
+                  onCameraMove: (position) => tempSelected = position.target,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  zoomControlsEnabled: false,
+                  mapToolbarEnabled: false,
                 ),
-              ),
-            ],
+                Align(
+                  alignment: Alignment.center,
+                  child: Icon(Icons.location_on, size: 48, color: Color(0xFFF56D16)),
+                ),
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -105,208 +100,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ],
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color(0xFF4B2EFF),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 180),
-                SizedBox(height: 24),
-                Image.asset('assets/images/SUYO_LOGO.png', height: 60),
-                SizedBox(height: 12),
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(fontSize: 16),
-                    children: [
-                      TextSpan(
-                        text: "Create ",
-                        style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: "an account!",
-                        style: TextStyle(color: Color(0xFFC7C7C7)),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 32),
-                if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: _buildTextField(Icons.person_outline, "First Name", _firstNameController),
-                  ),
-                  SizedBox(height: 16),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
-                  ),
-                ]
-                else if (_isBusinessNameRequired) ...[
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
-                  ),
-                ],
-                SizedBox(height: 16),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.75,
-                  child: _buildTextField(Icons.email_outlined, "Email", _emailController),
-                ),
-                SizedBox(height: 16),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.75,
-                  child: _buildPasswordField(
-                    icon: Icons.lock_outline,
-                    hint: "Password",
-                    controller: _passwordController,
-                    isObscured: !_showPassword,
-                    toggleVisibility: () => setState(() => _showPassword = !_showPassword),
-                  ),
-                ),
-                SizedBox(height: 16),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.75,
-                  child: _buildPasswordField(
-                    icon: Icons.lock_outline,
-                    hint: "Confirm Password",
-                    controller: _confirmPasswordController,
-                    isObscured: !_showConfirmPassword,
-                    toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
-                  ),
-                ),
-                SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ChoiceChip(
-                      label: Text('Customer'),
-                      selected: _userType == "Customer",
-                      onSelected: (_) {
-                        setState(() {
-                          _userType = "Customer";
-                          _selectedServiceCategory = null;
-                        });
-                      },
-                      selectedColor: Color(0xFFF56D16),
-                      labelStyle: TextStyle(color: Colors.white),
-                      backgroundColor: Color(0xFF3A22CC),
-                    ),
-                    SizedBox(width: 12),
-                    ChoiceChip(
-                      label: Text('Service Provider'),
-                      selected: _userType == "Service Provider",
-                      onSelected: (_) => setState(() => _userType = "Service Provider"),
-                      selectedColor: Color(0xFFF56D16),
-                      labelStyle: TextStyle(color: Colors.white),
-                      backgroundColor: Color(0xFF3A22CC),
-                    ),
-                  ],
-                ),
-                if (_userType == "Service Provider") ...[
-                  SizedBox(height: 16),
-                  SizedBox(
-                    height: 50,
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: InputDecorator(
-                      decoration: InputDecoration(
-                        prefixIcon: Padding(
-                          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-                          child: Icon(Icons.business_center, color: Color(0xFFF56D16)),
-                        ),
-                        filled: true,
-                        fillColor: Color(0xFF3A22CC),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedServiceCategory,
-                          isExpanded: true,
-                          iconEnabledColor: Colors.white70,
-                          dropdownColor: Color(0xFF3A22CC),
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                          hint: Text("Select Service Category", style: TextStyle(color: Colors.white70)),
-                          items: _serviceCategories.map((category) {
-                            return DropdownMenuItem<String>(
-                              value: category,
-                              child: Text(category),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedServiceCategory = value;
-                            });
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-
-                if (_needsLocationPin) ...[
-                  SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    onPressed: _pickLocationOnMap,
-                    icon: Icon(Icons.location_pin, color: Colors.white),
-                    label: Text(
-                      _selectedLocation == null ? 'Set Location' : 'Change Location',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFF56D16),
-                      padding: EdgeInsets.symmetric(vertical: 14, horizontal: 20),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    ),
-                  ),
-                ],
-                SizedBox(height: 24),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.75,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _register,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFF56D16),
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                    ),
-                    child: _isLoading
-                        ? CircularProgressIndicator(color: Colors.white)
-                        : Text("Register", style: TextStyle(fontSize: 16, color: Colors.white)),
-                  ),
-                ),
-                SizedBox(height: 16),
-                RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(text: "Already have an account? ", style: TextStyle(color: Colors.white)),
-                      WidgetSpan(
-                        child: GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Text(
-                            "Login",
-                            style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -370,6 +163,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         userProfile['lastName'] = _lastNameController.text.trim();
       } else if (_userType == "Service Provider") {
         userProfile['serviceCategory'] = _selectedServiceCategory;
+        userProfile['rating'] = 0.0;
+        userProfile['ratingCount'] = 0;
+
         if (_isBusinessNameRequired) {
           userProfile['businessName'] = _businessNameController.text.trim();
         } else {
@@ -402,21 +198,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildTextField(IconData icon, String hint, TextEditingController controller) {
-    return TextField(
-      controller: controller,
-      style: TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-          child: Icon(icon, color: Color(0xFFF56D16)),
-        ),
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: Color(0xFF3A22CC),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.75,
+      child: TextField(
+        controller: controller,
+        style: TextStyle(color: Colors.white, fontSize: 16),
+        decoration: InputDecoration(
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+            child: Icon(icon, color: Color(0xFFF56D16)),
+          ),
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.white70),
+          filled: true,
+          fillColor: Color(0xFF3A22CC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
         ),
       ),
     );
@@ -429,29 +228,215 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required bool isObscured,
     required VoidCallback toggleVisibility,
   }) {
-    return TextField(
-      controller: controller,
-      obscureText: isObscured,
-      style: TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-          child: Icon(icon, color: Color(0xFFF56D16)),
-        ),
-        suffixIcon: IconButton(
-          icon: Icon(
-            isObscured ? Icons.visibility_off : Icons.visibility,
-            color: Color(0xFFC7C7C7).withOpacity(0.65),
+    return SizedBox(
+      width: MediaQuery.of(context).size.width * 0.75,
+      child: TextField(
+        controller: controller,
+        obscureText: isObscured,
+        style: TextStyle(color: Colors.white, fontSize: 16),
+        decoration: InputDecoration(
+          prefixIcon: Padding(
+            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+            child: Icon(icon, color: Color(0xFFF56D16)),
           ),
-          onPressed: toggleVisibility,
+          suffixIcon: IconButton(
+            icon: Icon(
+              isObscured ? Icons.visibility_off : Icons.visibility,
+              color: Color(0xFFC7C7C7).withOpacity(0.65),
+            ),
+            onPressed: toggleVisibility,
+          ),
+          hintText: hint,
+          hintStyle: TextStyle(color: Colors.white70),
+          filled: true,
+          fillColor: Color(0xFF3A22CC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
         ),
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: Color(0xFF3A22CC),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _businessNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF4B2EFF),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 180),
+                SizedBox(height: 24),
+                Image.asset('assets/images/SUYO_LOGO.png', height: 60),
+                SizedBox(height: 12),
+                RichText(
+                  text: TextSpan(
+                    style: TextStyle(fontSize: 16),
+                    children: [
+                      TextSpan(
+                        text: "Create ",
+                        style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: "an account!",
+                        style: TextStyle(color: Color(0xFFC7C7C7)),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 32),
+                if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
+                  _buildTextField(Icons.person_outline, "First Name", _firstNameController),
+                  SizedBox(height: 16),
+                  _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
+                ] else ...[
+                  _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
+                ],
+                SizedBox(height: 16),
+                _buildTextField(Icons.email_outlined, "Email", _emailController),
+                SizedBox(height: 16),
+                _buildPasswordField(
+                  icon: Icons.lock_outline,
+                  hint: "Password",
+                  controller: _passwordController,
+                  isObscured: !_showPassword,
+                  toggleVisibility: () => setState(() => _showPassword = !_showPassword),
+                ),
+                SizedBox(height: 16),
+                _buildPasswordField(
+                  icon: Icons.lock_outline,
+                  hint: "Confirm Password",
+                  controller: _confirmPasswordController,
+                  isObscured: !_showConfirmPassword,
+                  toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                ),
+                SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    ChoiceChip(
+                      label: Text('Customer'),
+                      selected: _userType == "Customer",
+                      onSelected: (_) {
+                        setState(() {
+                          _userType = "Customer";
+                          _selectedServiceCategory = null;
+                        });
+                      },
+                      selectedColor: Color(0xFFF56D16),
+                      labelStyle: TextStyle(color: Colors.white),
+                      backgroundColor: Color(0xFF3A22CC),
+                    ),
+                    SizedBox(width: 12),
+                    ChoiceChip(
+                      label: Text('Service Provider'),
+                      selected: _userType == "Service Provider",
+                      onSelected: (_) => setState(() => _userType = "Service Provider"),
+                      selectedColor: Color(0xFFF56D16),
+                      labelStyle: TextStyle(color: Colors.white),
+                      backgroundColor: Color(0xFF3A22CC),
+                    ),
+                  ],
+                ),
+                if (_userType == "Service Provider") ...[
+                  SizedBox(height: 16),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.75,
+                    child: DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        prefixIcon: Padding(
+                          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
+                          child: Icon(Icons.business_center, color: Color(0xFFF56D16)),
+                        ),
+                        filled: true,
+                        fillColor: Color(0xFF3A22CC),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      dropdownColor: Color(0xFF3A22CC),
+                      iconEnabledColor: Colors.white70,
+                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      value: _selectedServiceCategory,
+                      hint: Text("Select Service Category", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      onChanged: (value) => setState(() => _selectedServiceCategory = value),
+                      items: _serviceCategories.map((category) {
+                        return DropdownMenuItem(
+                          value: category,
+                          child: Text(category, style: TextStyle(fontSize: 16)),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+                if (_needsLocationPin) ...[
+                  SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _pickLocationOnMap,
+                    icon: Icon(Icons.location_pin, color: Colors.white),
+                    label: Text(
+                      _selectedLocation == null ? 'Set Location' : 'Change Location',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFF56D16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                    ),
+                  ),
+                ],
+                SizedBox(height: 24),
+                SizedBox(
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.55,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _register,
+                    child: _isLoading
+                        ? CircularProgressIndicator(color: Colors.white)
+                        : Text("Register", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFFF56D16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Text.rich(
+                    TextSpan(
+                      text: "Already have an account? ",
+                      style: TextStyle(color: Colors.white),
+                      children: [
+                        TextSpan(
+                          text: "Login",
+                          style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

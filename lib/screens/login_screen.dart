@@ -135,7 +135,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.75,
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.55,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
@@ -145,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white)),
+                        : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                 ),
                 const SizedBox(height: 24),

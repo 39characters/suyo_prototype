@@ -1,15 +1,17 @@
 import 'dart:async';
-import 'dart:math';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart';
+import 'package:suyo_prototype/secrets.dart'; // Make sure this path is correct
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
   final double price;
-
   const BookingScreen({
     required this.serviceCategory,
     required this.price,
@@ -33,6 +35,7 @@ class _BookingScreenState extends State<BookingScreen> {
   void initState() {
     super.initState();
     _getUserLocation();
+    print("Init ran!");
   }
 
   Future<void> _getUserLocation() async {
@@ -49,19 +52,6 @@ class _BookingScreenState extends State<BookingScreen> {
     _mapController?.setMapStyle(style);
   }
 
-  double _degToRad(double deg) => deg * (pi / 180);
-
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371;
-    final dLat = _degToRad(lat2 - lat1);
-    final dLon = _degToRad(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
-  }
-
   Future<void> _fetchProviders() async {
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
@@ -72,7 +62,6 @@ class _BookingScreenState extends State<BookingScreen> {
     final results = snapshot.docs.map((doc) {
       final data = doc.data();
       final location = data['location'];
-
       if (location == null || location['lat'] == null || location['lng'] == null) return null;
 
       final lat = location['lat'].toDouble();
@@ -90,43 +79,76 @@ class _BookingScreenState extends State<BookingScreen> {
     _filterProvidersByCenter();
   }
 
-  void _filterProvidersByCenter() {
-    if (_centerLocation == null) return;
+  Future<void> _filterProvidersByCenter() async {
+    if (_centerLocation == null || allProviders.isEmpty) return;
 
-    setState(() {
-      _isBuffering = true;
-    });
+    setState(() => _isBuffering = true);
 
-    Future.delayed(Duration(seconds: 1), () {
-      final results = allProviders.map((p) {
-        final distance = _calculateDistance(
-          _centerLocation!.latitude,
-          _centerLocation!.longitude,
-          p['lat'],
-          p['lng'],
-        );
-        return {
+    final updated = <Map<String, dynamic>>[];
+
+    if (kIsWeb) {
+      // 🔧 Mock values for Web
+      for (var p in allProviders) {
+        updated.add({
           ...p,
-          "distance": distance.toStringAsFixed(2),
-          "eta": "~${(distance * 2).toStringAsFixed(0)} min",
-        };
-      }).toList();
-
+          "distance": "2.5 km",
+          "eta": "7 mins",
+        });
+      }
+      await Future.delayed(Duration(seconds: 1));
       setState(() {
-        filteredProviders = results;
+        filteredProviders = updated;
         _isBuffering = false;
       });
-    });
-  }
+      return;
+    }
 
-  Set<Marker> _buildMarkers() => {};
+    final destinations = allProviders.map((p) => '${p['lat']},${p['lng']}').join('|');
+    final origins = '${_centerLocation!.latitude},${_centerLocation!.longitude}';
+
+    final url =
+        'https://maps.googleapis.com/maps/api/distancematrix/json?origins=$origins&destinations=$destinations&mode=driving&key=$googleApiKey';
+    
+    print("Sending request to: $url");
+
+    try {
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final elements = data['rows'][0]['elements'];
+
+        for (int i = 0; i < elements.length; i++) {
+          final element = elements[i];
+          final provider = allProviders[i];
+
+          if (element['status'] == 'OK') {
+            updated.add({
+              ...provider,
+              "distance": element['distance']['text'],
+              "eta": element['duration']['text'],
+            });
+          }
+        }
+
+        setState(() {
+          filteredProviders = updated;
+          _isBuffering = false;
+        });
+      } else {
+        print("Distance Matrix error: ${response.body}");
+        setState(() => _isBuffering = false);
+      }
+    } catch (e) {
+      print("Exception: $e");
+      setState(() => _isBuffering = false);
+    }
+  }
 
   void _onCameraMove(CameraPosition position) {
     _centerLocation = position.target;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 800), () {
-      _filterProvidersByCenter();
-    });
+    _debounce = Timer(const Duration(seconds: 1), _filterProvidersByCenter);
   }
 
   @override
@@ -154,19 +176,12 @@ class _BookingScreenState extends State<BookingScreen> {
                   myLocationEnabled: true,
                   myLocationButtonEnabled: true,
                   onCameraMove: _onCameraMove,
-                  markers: _buildMarkers(),
                 ),
-
-                // 📍 Raised Location Pin
-                Positioned(
-                  top: MediaQuery.of(context).size.height * 0.31,
-                  left: MediaQuery.of(context).size.width / 2 - 25,
-                  child: const IgnorePointer(
+                const IgnorePointer(
+                  child: Center(
                     child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
                   ),
                 ),
-
-                // 📦 Bottom Sheet
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -201,10 +216,10 @@ class _BookingScreenState extends State<BookingScreen> {
                         Expanded(
                           child: _isBuffering
                               ? const Center(
-                                  child: SizedBox(
-                                    height: 50,
-                                    child: ColoredBox(
-                                      color: Color(0xFFEDEBFF),
+                                  child: ColoredBox(
+                                    color: Color(0xFFEDEBFF),
+                                    child: SizedBox(
+                                      height: 50,
                                       child: Center(child: Text("Loading nearby providers...")),
                                     ),
                                   ),
@@ -242,7 +257,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                   ),
                                                 ),
                                                 Text(
-                                                  "ETA: ${p['eta']} (${p['distance']} km)",
+                                                  "ETA: ${p['eta']} (${p['distance']})",
                                                   style: const TextStyle(fontSize: 12),
                                                 ),
                                               ],
@@ -253,7 +268,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                                 const SizedBox(width: 4),
                                                 Text("${p['rating']}"),
                                               ],
-                                            )
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -290,10 +305,7 @@ class _BookingScreenState extends State<BookingScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            "Request Service",
-                            style: TextStyle(color: Colors.white),
-                          ),
+                          child: const Text("Request Service", style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),
