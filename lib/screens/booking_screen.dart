@@ -1,4 +1,3 @@
-// same imports...
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -6,6 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
+import 'pending_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -80,6 +82,7 @@ class _BookingScreenState extends State<BookingScreen> {
       final lng = location['lng'].toDouble();
 
       return {
+        "id": doc.id,
         "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
         "lat": lat,
         "lng": lng,
@@ -171,8 +174,6 @@ class _BookingScreenState extends State<BookingScreen> {
                   onCameraMove: _onCameraMove,
                   markers: _buildMarkers(),
                 ),
-
-                // Center pin shifted upward (visually only)
                 Positioned(
                   top: MediaQuery.of(context).size.height * 0.31,
                   left: MediaQuery.of(context).size.width / 2 - 25,
@@ -180,8 +181,6 @@ class _BookingScreenState extends State<BookingScreen> {
                     child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
                   ),
                 ),
-
-                // Bottom details
                 Positioned(
                   bottom: 0,
                   left: 0,
@@ -294,9 +293,35 @@ class _BookingScreenState extends State<BookingScreen> {
                                       ),
                                     ),
                                   );
-                                  await Future.delayed(const Duration(seconds: 2));
+
+                                  final uid = FirebaseAuth.instance.currentUser!.uid;
+
+                                  final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
+                                    'customerId': uid,
+                                    'providerId': _selectedProvider!['id'],
+                                    'serviceCategory': widget.serviceCategory,
+                                    'status': 'pending',
+                                    'timestamp': DateTime.now(),
+                                    'location': {
+                                      'lat': _centerLocation?.latitude,
+                                      'lng': _centerLocation?.longitude,
+                                    },
+                                    'price': widget.price,
+                                  });
+
                                   Navigator.pop(context);
-                                  Navigator.pushNamed(context, "/inprogress");
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => PendingScreen(
+                                        provider: _selectedProvider!,
+                                        serviceCategory: widget.serviceCategory,
+                                        price: widget.price,
+                                        bookingId: bookingRef.id,
+                                      ),
+                                    ),
+                                  );
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),

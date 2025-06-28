@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_details_bottom_sheet.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'pending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -12,6 +13,37 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int selectedService = -1;
   int _selectedTab = 0;
+  Map<String, dynamic>? _pendingBooking;
+  String? _pendingBookingId;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPendingBooking();
+  }
+
+  Future<void> _checkPendingBooking() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('customerId', isEqualTo: user.uid)
+        .where('status', isEqualTo: 'pending')
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      setState(() {
+        print("✅ Pending booking found");
+        _pendingBooking = snapshot.docs.first.data();
+        _pendingBookingId = snapshot.docs.first.id;
+      });
+    }
+    else {
+      print("❌ No pending bookings");
+    }
+  }
 
   final List<Map<String, dynamic>> services = [
     {
@@ -52,8 +84,36 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(height: 1, color: Colors.white),
-          const SizedBox(height: 32),
+          if (_pendingBooking != null && _pendingBookingId != null)
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => PendingScreen(
+                    provider: null,
+                    serviceCategory: _pendingBooking!['serviceCategory'] ?? 'Service',
+                    price: (_pendingBooking!['price'] ?? 0).toDouble(),
+                    bookingId: _pendingBookingId!,
+                  ),
+                ),
+              ).then((_) {
+                // 🔁 Re-check pending bookings after returning
+                _checkPendingBooking();
+              });
+            },
+            child: Container(
+              width: double.infinity,
+              color: Colors.amber,
+              padding: const EdgeInsets.all(12),
+              child: const Text(
+                "⏳ You have a pending request — tap to view",
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        const SizedBox(height: 32),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(

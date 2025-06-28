@@ -9,6 +9,7 @@ import 'screens/rating_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/provider_home_screen.dart';
+import 'screens/pending_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
