@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RatingScreen extends StatefulWidget {
+  final String bookingId;
+  final Map<String, dynamic>? provider;
+  final String serviceCategory;
+  final double price;
+
+  const RatingScreen({
+    Key? key,
+    required this.bookingId,
+    required this.provider,
+    required this.serviceCategory,
+    required this.price,
+  }) : super(key: key);
+
   @override
   _RatingScreenState createState() => _RatingScreenState();
 }
@@ -8,24 +22,68 @@ class RatingScreen extends StatefulWidget {
 class _RatingScreenState extends State<RatingScreen> {
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
+  bool _isSubmitting = false;
 
-  void _submitRating() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Thank you!"),
-        content: Text("Your feedback has been submitted."),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // close dialog
-              Navigator.popUntil(context, ModalRoute.withName('/'));
-            },
-            child: Text("OK"),
-          ),
-        ],
-      ),
-    );
+  Future<void> _submitRating() async {
+    if (_rating == 0) return;
+
+    setState(() => _isSubmitting = true);
+
+    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+    final providerId = widget.provider?['id'];
+
+    try {
+      // Save rating & feedback to booking document
+      await bookingRef.update({
+        'rating': _rating,
+        'feedback': _feedbackController.text.trim(),
+        'ratedAt': DateTime.now(),
+      });
+
+      if (providerId != null) {
+        final providerRef = FirebaseFirestore.instance.collection('users').doc(providerId);
+
+        // Update provider's average rating
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+          final snapshot = await transaction.get(providerRef);
+          if (!snapshot.exists) return;
+
+          final data = snapshot.data()!;
+          final currentRating = (data['rating'] ?? 4.5).toDouble();
+          final ratingCount = (data['ratingCount'] ?? 0) as int;
+
+          final newRatingCount = ratingCount + 1;
+          final newRating = ((currentRating * ratingCount) + _rating) / newRatingCount;
+
+          transaction.update(providerRef, {
+            'rating': newRating,
+            'ratingCount': newRatingCount,
+          });
+        });
+      }
+
+      setState(() => _isSubmitting = false);
+
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Thank you!"),
+          content: const Text("Your feedback has been submitted."),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.popUntil(context, ModalRoute.withName('/')); // Go back home
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      setState(() => _isSubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error submitting rating: $e")));
+    }
   }
 
   Widget buildStar(int index) {
@@ -44,51 +102,60 @@ class _RatingScreenState extends State<RatingScreen> {
   }
 
   @override
+  void dispose() {
+    _feedbackController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final providerName = widget.provider?['name'] ?? "Provider";
+    final providerPhoto = widget.provider?['photoUrl'] ?? "https://via.placeholder.com/150";
+    final serviceCategory = widget.serviceCategory;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text("Rate Your Provider"),
+        title: const Text("Rate Your Provider"),
         backgroundColor: Colors.white,
         elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black87),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: Colors.black87),
+        titleTextStyle: const TextStyle(
           color: Colors.black87,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
       ),
       body: Padding(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             CircleAvatar(
               radius: 45,
-              backgroundImage:
-                  NetworkImage("https://via.placeholder.com/150"),
+              backgroundImage: NetworkImage(providerPhoto),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Text(
-              "Anna's Cleaners",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+              providerName,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 6),
             Text(
-              "House Cleaning",
+              serviceCategory,
               style: TextStyle(color: Colors.grey[600]),
             ),
-            SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 24),
+            const Text(
               "How was the service?",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) => buildStar(index + 1)),
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             TextField(
               controller: _feedbackController,
               maxLines: 4,
@@ -102,19 +169,19 @@ class _RatingScreenState extends State<RatingScreen> {
                 ),
               ),
             ),
-            Spacer(),
+            const Spacer(),
             ElevatedButton(
-              onPressed: _rating == 0 ? null : _submitRating,
+              onPressed: (_rating == 0 || _isSubmitting) ? null : _submitRating,
               style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _rating == 0 ? Colors.grey : Color(0xFF4B2EFF),
-                minimumSize: Size.fromHeight(50),
+                backgroundColor: (_rating == 0 || _isSubmitting) ? Colors.grey : const Color(0xFF4B2EFF),
+                minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: Text("Submit Rating",
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              child: _isSubmitting
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Submit Rating", style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ],
         ),

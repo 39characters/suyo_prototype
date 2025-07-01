@@ -296,6 +296,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                   final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
                                     'customerId': uid,
                                     'providerId': _selectedProvider!['id'],
+                                    'providerName': _selectedProvider!['name'],
                                     'serviceCategory': widget.serviceCategory,
                                     'status': 'pending',
                                     'timestamp': DateTime.now(),

@@ -33,7 +33,7 @@ class SuyoApp extends StatelessWidget {
       ),
       home: LoginScreen(),
       routes: {
-        '/rate': (context) => RatingScreen(),
+        //'/rate': (context) => RatingScreen(),
         '/home': (context) => HomeScreen(),
         '/register': (context) => RegisterScreen(),
         '/providerHome': (context) => ProviderHomeScreen(),

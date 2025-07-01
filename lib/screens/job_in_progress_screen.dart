@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'rating_screen.dart';
 
 class JobInProgressScreen extends StatelessWidget {
   final String bookingId;
@@ -159,8 +160,8 @@ class JobInProgressScreen extends StatelessWidget {
                       // TODO: Add real contact provider logic
                     },
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.black,
-                      side: const BorderSide(color: Colors.black),
+                      foregroundColor: const Color(0xFF4B2EFF),
+                      side: const BorderSide(color: Color(0xFF4B2EFF)),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -173,17 +174,27 @@ class JobInProgressScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, "/rate");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => RatingScreen(
+                            bookingId: bookingId,
+                            provider: provider,
+                            serviceCategory: serviceCategory,
+                            price: price,
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: const Color(0xFF4B2EFF),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text("Done"),
+                    child: const Text("Mark as Done"),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -219,7 +230,6 @@ class JobInProgressScreen extends StatelessWidget {
                                     ],
                                   ),
                                 );
-
                                 print("🚨 Panic button triggered for booking $bookingId");
                               },
                             ),
@@ -228,7 +238,7 @@ class JobInProgressScreen extends StatelessWidget {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: const Color(0xFFb05a4f),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(

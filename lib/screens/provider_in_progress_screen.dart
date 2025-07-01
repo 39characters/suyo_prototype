@@ -27,56 +27,11 @@ class ProviderInProgressScreen extends StatelessWidget {
         title: const Text(
           "Job In Progress",
           style: TextStyle(color: Colors.white),
-          ),
+        ),
         backgroundColor: const Color(0xFF4B2EFF),
         elevation: 1,
-        titleTextStyle: const TextStyle(
-          color: Colors.black87,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
-        ),
       ),
       backgroundColor: Colors.white,
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.red,
-        child: const Icon(Icons.warning, color: Colors.white),
-        tooltip: "Emergency Panic Button",
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              title: const Text("Emergency"),
-              content: const Text("Are you sure you want to trigger the panic alert?"),
-              actions: [
-                TextButton(
-                  child: const Text("Cancel"),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                TextButton(
-                  child: const Text("Yes, Trigger"),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        title: const Text("Alert Sent"),
-                        content: const Text("Support has been notified. Stay safe."),
-                        actions: [
-                          TextButton(
-                            child: const Text("OK"),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    );
-                    print("🚨 Panic button triggered for booking $bookingId");
-                  },
-                ),
-              ],
-            ),
-          );
-        },
-      ),
       body: FutureBuilder<Map<String, dynamic>>(
         future: _getBookingData(),
         builder: (context, snapshot) {
@@ -145,8 +100,8 @@ class ProviderInProgressScreen extends StatelessWidget {
                               // TODO: Add contact logic
                             },
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: Colors.black,
-                              side: const BorderSide(color: Colors.black),
+                              foregroundColor: const Color(0xFF4B2EFF),
+                              side: const BorderSide(color: Color(0xFF4B2EFF)),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10),
                               ),
@@ -169,7 +124,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                               Navigator.pop(context);
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
+                              backgroundColor: const Color(0xFF4B2EFF),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
@@ -177,6 +132,55 @@ class ProviderInProgressScreen extends StatelessWidget {
                               ),
                             ),
                             child: const Text("Mark as Done"),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text("Emergency"),
+                                  content: const Text("Are you sure you want to trigger the panic alert?"),
+                                  actions: [
+                                    TextButton(
+                                      child: const Text("Cancel"),
+                                      onPressed: () => Navigator.pop(context),
+                                    ),
+                                    TextButton(
+                                      child: const Text("Yes, Trigger"),
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        showDialog(
+                                          context: context,
+                                          builder: (_) => AlertDialog(
+                                            title: const Text("Alert Sent"),
+                                            content: const Text("Support has been notified. Stay safe."),
+                                            actions: [
+                                              TextButton(
+                                                child: const Text("OK"),
+                                                onPressed: () => Navigator.pop(context),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        print("🚨 Panic button triggered for booking $bookingId");
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFb05a4f),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            child: const Text("Panic"),
                           ),
                         ),
                       ],
