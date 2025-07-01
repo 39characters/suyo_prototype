@@ -6,11 +6,13 @@ import 'screens/home_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/job_in_progress_screen.dart';
 import 'screens/rating_screen.dart';
+import 'screens/rate_customer_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/provider_home_screen.dart';
 import 'screens/customer_pending_screen.dart';
-import 'screens/provider_in_progress_screen.dart'; // ✅ Import this
+import 'screens/provider_in_progress_screen.dart';
+import 'screens/rate_customer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,16 +35,14 @@ class SuyoApp extends StatelessWidget {
       ),
       home: LoginScreen(),
       routes: {
-        //'/rate': (context) => RatingScreen(),
         '/home': (context) => HomeScreen(),
         '/register': (context) => RegisterScreen(),
         '/providerHome': (context) => ProviderHomeScreen(),
 
         // ✅ CUSTOMER PENDING
         '/pending': (context) {
-          final settings = ModalRoute.of(context)!.settings;
-          final args = settings.arguments;
-          if (args == null || args is! Map<String, dynamic>) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          if (args == null) {
             return const Scaffold(
               body: Center(child: Text("❌ Missing or invalid arguments for /pending")),
             );
@@ -59,9 +59,8 @@ class SuyoApp extends StatelessWidget {
 
         // ✅ CUSTOMER IN PROGRESS
         '/inprogress': (context) {
-          final settings = ModalRoute.of(context)!.settings;
-          final args = settings.arguments;
-          if (args == null || args is! Map<String, dynamic>) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          if (args == null) {
             return const Scaffold(
               body: Center(child: Text("❌ Missing or invalid arguments for /inprogress")),
             );
@@ -79,14 +78,47 @@ class SuyoApp extends StatelessWidget {
 
         // ✅ PROVIDER IN PROGRESS
         '/providerInProgress': (context) {
-          final settings = ModalRoute.of(context)!.settings;
-          final args = settings.arguments;
-          if (args == null || args is! Map<String, dynamic> || args['bookingId'] == null) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          if (args == null || args['bookingId'] == null) {
             return const Scaffold(
               body: Center(child: Text("❌ Missing or invalid arguments for /providerInProgress")),
             );
           }
-          return ProviderInProgressScreen(bookingId: args['bookingId']);
+          return ProviderInProgressScreen(
+            bookingId: args['bookingId'],
+          );
+        },
+
+        // ✅ CUSTOMER RATING PROVIDER
+        '/rate': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          if (args == null) {
+            return const Scaffold(
+              body: Center(child: Text("❌ Missing or invalid arguments for /rate")),
+            );
+          }
+          return RatingScreen(
+            bookingId: args['bookingId'],
+            provider: args['provider'],
+            serviceCategory: args['serviceCategory'],
+            price: (args['price'] ?? 0.0) as double,
+          );
+        },
+
+        // ✅ PROVIDER RATING CUSTOMER
+        '/rate_customer': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
+          if (args == null) {
+            return const Scaffold(
+              body: Center(child: Text("❌ Missing or invalid arguments for /rate_customer")),
+            );
+          }
+          return RateCustomerScreen(
+            bookingId: args['bookingId'],
+            customer: args['customer'],
+            serviceCategory: args['serviceCategory'],
+            price: (args['price'] ?? 0.0) as double,
+          );
         },
       },
     );

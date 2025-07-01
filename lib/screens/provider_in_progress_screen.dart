@@ -1,60 +1,124 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'rate_customer_screen.dart';
 
 class ProviderInProgressScreen extends StatelessWidget {
   final String bookingId;
 
   const ProviderInProgressScreen({Key? key, required this.bookingId}) : super(key: key);
 
-  Future<Map<String, dynamic>> _getBookingData() async {
-    final doc = await FirebaseFirestore.instance.collection('bookings').doc(bookingId).get();
-    if (!doc.exists) throw Exception('Booking not found');
-    return doc.data()!;
+  Future<Map<String, dynamic>> _getCustomerData(String customerId) async {
+    final doc = FirebaseFirestore.instance.collection('users').doc(customerId);
+    final snapshot = await doc.get();
+    if (!snapshot.exists) return {};
+    final data = snapshot.data()!;
+    return {
+      'id': customerId,
+      'name': "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim(),
+      'photoUrl': data['photoUrl'] ?? "https://via.placeholder.com/150",
+    };
   }
 
-  Future<String> _getCustomerName(String customerId) async {
-    final doc = await FirebaseFirestore.instance.collection('users').doc(customerId).get();
-    if (!doc.exists) return 'Unknown';
-    final data = doc.data()!;
-    return '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
+  Future<void> _handleMarkAsDone(
+    BuildContext context,
+    String customerId,
+    String serviceCategory,
+    double price,
+  ) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Confirm Completion"),
+        content: const Text("Are you sure the service is fully completed?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Yes, Complete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(bookingId);
+    await bookingRef.update({
+      'status': 'completed',
+      'completedAt': Timestamp.now(),
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          "Job In Progress",
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: const Color(0xFF4B2EFF),
-        elevation: 1,
-      ),
-      backgroundColor: Colors.white,
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _getBookingData(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text("❌ Error: ${snapshot.error}"));
-          }
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('bookings').doc(bookingId).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-          final booking = snapshot.data!;
-          final lat = booking['location']?['lat'] ?? 0.0;
-          final lng = booking['location']?['lng'] ?? 0.0;
+        final booking = snapshot.data!.data() as Map<String, dynamic>?;
+        if (booking == null) {
+          return const Scaffold(
+            body: Center(child: Text("Booking not found.")),
+          );
+        }
+
+        final status = booking['status'] ?? '';
+        if (status == 'completed') {
           final serviceCategory = booking['serviceCategory'] ?? 'Unknown';
           final price = (booking['price'] ?? 0).toDouble();
           final customerId = booking['customerId'];
 
-          return FutureBuilder<String>(
-            future: _getCustomerName(customerId),
+          return FutureBuilder<Map<String, dynamic>>(
+            future: _getCustomerData(customerId),
             builder: (context, customerSnapshot) {
-              final customerName = customerSnapshot.data ?? 'Loading...';
+              if (!customerSnapshot.hasData) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
-              return Padding(
+              final customer = customerSnapshot.data ?? {};
+
+              return RateCustomerScreen(
+                bookingId: bookingId,
+                customer: customer,
+                serviceCategory: serviceCategory,
+                price: price,
+              );
+            },
+          );
+        }
+
+        final lat = booking['location']?['lat'] ?? 0.0;
+        final lng = booking['location']?['lng'] ?? 0.0;
+        final serviceCategory = booking['serviceCategory'] ?? 'Unknown';
+        final price = (booking['price'] ?? 0).toDouble();
+        final customerId = booking['customerId'];
+
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _getCustomerData(customerId),
+          builder: (context, customerSnapshot) {
+            final customer = customerSnapshot.data ?? {};
+            final customerName = customer['name'] ?? 'Loading...';
+
+            return Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                iconTheme: const IconThemeData(color: Colors.white),
+                title: const Text("Job In Progress", style: TextStyle(color: Colors.white)),
+                backgroundColor: const Color(0xFF4B2EFF),
+                elevation: 1,
+              ),
+              backgroundColor: Colors.white,
+              body: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,16 +177,12 @@ class ProviderInProgressScreen extends StatelessWidget {
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            onPressed: () async {
-                              await FirebaseFirestore.instance
-                                  .collection('bookings')
-                                  .doc(bookingId)
-                                  .update({
-                                'status': 'completed',
-                                'completedAt': Timestamp.now(),
-                              });
-                              Navigator.pop(context);
-                            },
+                            onPressed: () => _handleMarkAsDone(
+                              context,
+                              customerId,
+                              serviceCategory,
+                              price,
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF4B2EFF),
                               foregroundColor: Colors.white,
@@ -187,11 +247,11 @@ class ProviderInProgressScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-              );
-            },
-          );
-        },
-      ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
