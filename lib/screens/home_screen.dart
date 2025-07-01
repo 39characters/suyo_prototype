@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_details_bottom_sheet.dart';
-import 'pending_screen.dart';
+import 'customer_pending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   @override
@@ -39,8 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _pendingBooking = snapshot.docs.first.data();
         _pendingBookingId = snapshot.docs.first.id;
       });
-    }
-    else {
+    } else {
       print("❌ No pending bookings");
     }
   }
@@ -85,35 +84,36 @@ class _HomeScreenState extends State<HomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_pendingBooking != null && _pendingBookingId != null)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => PendingScreen(
-                    provider: null,
-                    serviceCategory: _pendingBooking!['serviceCategory'] ?? 'Service',
-                    price: (_pendingBooking!['price'] ?? 0).toDouble(),
-                    bookingId: _pendingBookingId!,
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => CustomerPendingScreen(
+                      provider: null,
+                      serviceCategory: _pendingBooking!['serviceCategory'] ?? 'Service',
+                      price: (_pendingBooking!['price'] ?? 0).toDouble(),
+                      location: _pendingBooking!['location'],
+                      bookingId: _pendingBookingId!,
+                      customerId: _pendingBooking!['customerId'],
+                    ),
                   ),
+                ).then((_) {
+                  _checkPendingBooking();
+                });
+              },
+              child: Container(
+                width: double.infinity,
+                color: Colors.amber,
+                padding: const EdgeInsets.all(12),
+                child: const Text(
+                  "⏳ You have a pending request — tap to view",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  textAlign: TextAlign.center,
                 ),
-              ).then((_) {
-                // 🔁 Re-check pending bookings after returning
-                _checkPendingBooking();
-              });
-            },
-            child: Container(
-              width: double.infinity,
-              color: Colors.amber,
-              padding: const EdgeInsets.all(12),
-              child: const Text(
-                "⏳ You have a pending request — tap to view",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                textAlign: TextAlign.center,
               ),
             ),
-          ),
-        const SizedBox(height: 32),
+          const SizedBox(height: 32),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
             child: Center(
@@ -300,6 +300,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF4B2EFF),
         elevation: 0,
         toolbarHeight: 56,

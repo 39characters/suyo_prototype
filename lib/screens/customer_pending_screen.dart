@@ -5,25 +5,29 @@ import 'package:intl/intl.dart';
 import 'package:suyo_prototype/screens/home_screen.dart';
 import 'package:suyo_prototype/screens/job_in_progress_screen.dart';
 
-class PendingScreen extends StatefulWidget {
+class CustomerPendingScreen extends StatefulWidget {
   final Map<String, dynamic>? provider;
   final String serviceCategory;
   final double price;
+  final Map<String, dynamic> location;
   final String bookingId;
+  final String customerId;
 
-  const PendingScreen({
+  const CustomerPendingScreen({
     Key? key,
     required this.provider,
     required this.serviceCategory,
     required this.price,
+    required this.location,
     required this.bookingId,
+    required this.customerId,
   }) : super(key: key);
 
   @override
-  State<PendingScreen> createState() => _PendingScreenState();
+  State<CustomerPendingScreen> createState() => _CustomerPendingScreenState();
 }
 
-class _PendingScreenState extends State<PendingScreen> {
+class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
   StreamSubscription<DocumentSnapshot>? _bookingSubscription;
 
   @override
@@ -33,8 +37,7 @@ class _PendingScreenState extends State<PendingScreen> {
   }
 
   void _listenToBookingStatus() {
-    final bookingRef =
-        FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
 
     _bookingSubscription = bookingRef.snapshots().listen((snapshot) {
       if (snapshot.exists) {
@@ -55,6 +58,7 @@ class _PendingScreenState extends State<PendingScreen> {
                 provider: widget.provider,
                 serviceCategory: widget.serviceCategory,
                 price: widget.price,
+                location: data['location'], // ✅ FIXED HERE
                 startedAt: startedAt,
                 eta: eta,
               ),
@@ -83,7 +87,11 @@ class _PendingScreenState extends State<PendingScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Pending Booking'),
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: const Text(
+            'Pending Booking',
+            style: TextStyle(color: Colors.white),
+          ),
           backgroundColor: const Color(0xFF4B2EFF),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -95,6 +103,7 @@ class _PendingScreenState extends State<PendingScreen> {
             },
           ),
         ),
+        backgroundColor: Colors.white,
         body: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(

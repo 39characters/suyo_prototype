@@ -24,13 +24,30 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     return '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
   }
 
-  Future<void> _updateBookingStatus(String bookingId, String status) async {
+  Future<void> _acceptBooking(String bookingId, Map<String, dynamic> job) async {
     final uid = currentUser?.uid;
-    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
-      'status': status,
-      'providerId': uid,
-      'providerAcceptedAt': Timestamp.now(),
-    });
+
+    try {
+      await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+        'status': 'accepted',
+        'providerId': uid,
+        'providerAcceptedAt': Timestamp.now(),
+      });
+
+      print("✔️ Booking $bookingId status updated to accepted by provider $uid");
+
+      if (!mounted) return;
+
+      Navigator.pushNamed(
+        context,
+        '/providerInProgress',
+        arguments: {
+          'bookingId': bookingId,
+        },
+      );
+    } catch (e) {
+      print("❌ Error accepting job: $e");
+    }
   }
 
   Widget _buildJobList() {
@@ -41,15 +58,15 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
         final jobs = snapshot.data!.docs;
         if (jobs.isEmpty) {
-          return Center(child: Text("No new jobs", style: TextStyle(color: Colors.white70)));
+          return const Center(child: Text("No new jobs", style: TextStyle(color: Colors.white70)));
         }
 
         return ListView.builder(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           itemCount: jobs.length,
           itemBuilder: (context, index) {
             final doc = jobs[index];
@@ -63,44 +80,49 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
             final customerId = job['customerId'] as String?;
 
             return Card(
-              color: Color(0xFF3A22CC),
+              color: const Color(0xFF3A22CC),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("$service – ₱${price.toStringAsFixed(2)}",
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text(
+                      "$service – ₱${price.toStringAsFixed(2)}",
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
                     FutureBuilder<String>(
                       future: customerId != null ? _getCustomerName(customerId) : Future.value('Unknown'),
                       builder: (_, snap) {
                         final name = snap.data ?? (snap.connectionState == ConnectionState.waiting ? '...' : 'Unknown');
-                        return Text("Customer: $name",
-                            style: TextStyle(color: Colors.white70));
+                        return Text("Customer: $name", style: const TextStyle(color: Colors.white70));
                       },
                     ),
                     const SizedBox(height: 4),
-                    Text("Location: $lat, $lng",
-                        style: TextStyle(color: Colors.white70)),
+                    Text("Location: $lat, $lng", style: const TextStyle(color: Colors.white70)),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         ElevatedButton(
-                          onPressed: () => _updateBookingStatus(bookingId, 'in_progress'),
-                          child: Text("Accept"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF4CAF50),
+                          onPressed: () => _acceptBooking(bookingId, job),
+                          child: const Text(
+                            "Accept",
+                            style: TextStyle(color: Colors.white),
                           ),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF4CAF50)),
                         ),
                         const SizedBox(width: 8),
                         ElevatedButton(
-                          onPressed: () => _updateBookingStatus(bookingId, 'declined'),
-                          child: Text("Decline"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFF44336),
+                          onPressed: () => FirebaseFirestore.instance
+                              .collection('bookings')
+                              .doc(bookingId)
+                              .update({'status': 'declined'}),
+                          child: const Text(
+                            "Decline",
+                            style: TextStyle(color: Colors.white),
                           ),
+                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFF44336)),
                         ),
                       ],
                     ),
@@ -119,20 +141,20 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('bookings')
-          .where('status', isEqualTo: 'in_progress')
+          .where('status', isEqualTo: 'accepted')
           .where('providerId', isEqualTo: uid)
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
         final inProgress = snapshot.data!.docs;
         if (inProgress.isEmpty) {
-          return Center(child: Text("No ongoing jobs", style: TextStyle(color: Colors.white70)));
+          return const Center(child: Text("No ongoing jobs", style: TextStyle(color: Colors.white70)));
         }
 
         return ListView.builder(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           itemCount: inProgress.length,
           itemBuilder: (context, index) {
             final job = inProgress[index].data() as Map<String, dynamic>;
@@ -140,25 +162,26 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
             final service = job['serviceCategory'] ?? 'Service';
 
             return Container(
-              margin: EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: Color(0xFF3A22CC),
+                color: const Color(0xFF3A22CC),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: ListTile(
-                leading: Icon(Icons.timer, color: Colors.white),
+                leading: const Icon(Icons.timer, color: Colors.white),
                 title: Text(
                   "$service – ₱${price.toStringAsFixed(2)}",
-                  style: TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white),
                 ),
-                subtitle: Text(
-                  "In progress",
-                  style: TextStyle(color: Colors.white70),
-                ),
-                trailing:
-                    Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                subtitle: const Text("In progress", style: TextStyle(color: Colors.white70)),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
                 onTap: () {
-                  // navigate to job detail if needed
+                  final bookingId = inProgress[index].id;
+                  Navigator.pushNamed(
+                    context,
+                    '/providerInProgress',
+                    arguments: {'bookingId': bookingId},
+                  );
                 },
               ),
             );
@@ -171,14 +194,14 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   Widget _buildProfile() {
     final user = currentUser;
     if (user == null) {
-      return Center(child: Text("Not signed in", style: TextStyle(color: Colors.white)));
+      return const Center(child: Text("Not signed in", style: TextStyle(color: Colors.white)));
     }
 
     return FutureBuilder<DocumentSnapshot>(
       future: FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
         }
         final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
         final fullName = data['businessName'] != null
@@ -189,25 +212,23 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.engineering, size: 72, color: Colors.white70),
+              const Icon(Icons.engineering, size: 72, color: Colors.white70),
               const SizedBox(height: 16),
-              Text(fullName,
-                  style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold)),
+              Text(
+                fullName,
+                style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
                   Navigator.pushReplacementNamed(context, '/');
                 },
-                child: Text("Sign Out", style: TextStyle(color: Colors.white)),
+                child: const Text("Sign Out", style: TextStyle(color: Colors.white)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFFF56D16),
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30)),
+                  backgroundColor: const Color(0xFFF56D16),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 ),
               ),
             ],
@@ -223,22 +244,23 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF4B2EFF),
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFF4B2EFF),
         elevation: 0,
-        title: Text("Provider Dashboard", style: TextStyle(color: Colors.white)),
+        title: const Text("Provider Dashboard", style: TextStyle(color: Colors.white)),
         centerTitle: true,
       ),
-      backgroundColor: Color(0xFF4B2EFF),
+      backgroundColor: const Color(0xFF4B2EFF),
       body: IndexedStack(index: _selectedTab, children: pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedTab,
         onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: Color(0xFF4B2EFF),
+        selectedItemColor: const Color(0xFF4B2EFF),
         unselectedItemColor: Colors.grey,
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold),
-        items: [
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        items: const [
           BottomNavigationBarItem(icon: Icon(Icons.assignment), label: 'Jobs'),
           BottomNavigationBarItem(icon: Icon(Icons.timelapse), label: 'In Progress'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),

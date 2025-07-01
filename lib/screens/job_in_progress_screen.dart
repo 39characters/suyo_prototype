@@ -7,6 +7,7 @@ class JobInProgressScreen extends StatelessWidget {
   final double price;
   final String startedAt;
   final String eta;
+  final Map<String, dynamic> location;
 
   const JobInProgressScreen({
     Key? key,
@@ -16,6 +17,7 @@ class JobInProgressScreen extends StatelessWidget {
     required this.price,
     required this.startedAt,
     required this.eta,
+    required this.location,
   }) : super(key: key);
 
   @override
@@ -25,15 +27,13 @@ class JobInProgressScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Service In Progress"),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black87),
-        titleTextStyle: const TextStyle(
-          color: Colors.black87,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+        title: const Text(
+          "Service In Progress",
+          style: TextStyle(color: Colors.white),
         ),
+        backgroundColor: const Color(0xFF4B2EFF),
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: Colors.white,
       body: Padding(
@@ -65,6 +65,9 @@ class JobInProgressScreen extends StatelessWidget {
               child: Text(
                 serviceCategory,
                 style: TextStyle(fontSize: 15, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
@@ -107,6 +110,20 @@ class JobInProgressScreen extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 8),
+
+            // Location info
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Location:", style: TextStyle(fontSize: 16)),
+                Text(
+                  "(${location['lat'].toStringAsFixed(4)}, ${location['lng'].toStringAsFixed(4)})",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+
             const SizedBox(height: 24),
 
             // Info Card
@@ -118,10 +135,10 @@ class JobInProgressScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
-                children: [
-                  const Icon(Icons.timer, color: Colors.black54),
-                  const SizedBox(width: 12),
-                  const Expanded(
+                children: const [
+                  Icon(Icons.timer, color: Colors.black54),
+                  SizedBox(width: 12),
+                  Expanded(
                     child: Text(
                       "The service is currently in progress. Please wait until it's completed.",
                       style: TextStyle(fontSize: 15, color: Colors.black87),
@@ -133,7 +150,7 @@ class JobInProgressScreen extends StatelessWidget {
 
             const Spacer(),
 
-            // Buttons
+            // Bottom Buttons
             Row(
               children: [
                 Expanded(
@@ -149,10 +166,10 @@ class JobInProgressScreen extends StatelessWidget {
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text("Contact Provider"),
+                    child: const Text("Contact"),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
@@ -166,7 +183,59 @@ class JobInProgressScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: const Text("Mark as Done"),
+                    child: const Text("Done"),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text("Emergency"),
+                          content: const Text("Are you sure you want to trigger the panic alert?"),
+                          actions: [
+                            TextButton(
+                              child: const Text("Cancel"),
+                              onPressed: () => Navigator.pop(context),
+                            ),
+                            TextButton(
+                              child: const Text("Yes, Trigger"),
+                              onPressed: () {
+                                Navigator.pop(context);
+
+                                // Mock support alert
+                                showDialog(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text("Alert Sent"),
+                                    content: const Text("Support has been notified. Stay safe."),
+                                    actions: [
+                                      TextButton(
+                                        child: const Text("OK"),
+                                        onPressed: () => Navigator.pop(context),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                print("🚨 Panic button triggered for booking $bookingId");
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: const Text("Panic"),
                   ),
                 ),
               ],

@@ -5,9 +5,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'pending_screen.dart';
+import 'customer_pending_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -132,9 +131,7 @@ class _BookingScreenState extends State<BookingScreen> {
           title: p['name'],
           snippet: 'ETA: ${p['eta']} (${p['distance']} km)',
         ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          BitmapDescriptor.hueOrange,
-        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
       );
     }).toSet();
   }
@@ -314,11 +311,16 @@ class _BookingScreenState extends State<BookingScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => PendingScreen(
+                                      builder: (_) => CustomerPendingScreen(
                                         provider: _selectedProvider!,
                                         serviceCategory: widget.serviceCategory,
                                         price: widget.price,
+                                        location: {
+                                          'lat': _centerLocation?.latitude,
+                                          'lng': _centerLocation?.longitude,
+                                        },
                                         bookingId: bookingRef.id,
+                                        customerId: uid,
                                       ),
                                     ),
                                   );
