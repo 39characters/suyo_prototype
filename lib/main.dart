@@ -32,12 +32,24 @@ class SuyoApp extends StatelessWidget {
       ),
       home: LoginScreen(),
       routes: {
-        '/inprogress': (context) => JobInProgressScreen(),
         '/rate': (context) => RatingScreen(),
         '/home': (context) => HomeScreen(),
         '/register': (context) => RegisterScreen(),
         '/providerHome': (context) => ProviderHomeScreen(),
+        '/inprogress': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+
+          return JobInProgressScreen(
+            bookingId: args['bookingId'],
+            provider: args['provider'],
+            serviceCategory: args['serviceCategory'],
+            price: args['price'],
+            startedAt: args['startedAt'],
+            eta: args['eta'],
+          );
+        }
       },
     );
+    
   }
 }

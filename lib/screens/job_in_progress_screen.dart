@@ -1,23 +1,35 @@
 import 'package:flutter/material.dart';
 
 class JobInProgressScreen extends StatelessWidget {
-  final Map<String, dynamic> provider = {
-    "name": "Anna's Cleaners",
-    "photoUrl": "https://via.placeholder.com/150", // Placeholder image
-    "jobType": "House Cleaning",
-    "startedAt": "2:30 PM",
-    "eta": "30 mins",
-  };
+  final String bookingId;
+  final Map<String, dynamic>? provider;
+  final String serviceCategory;
+  final double price;
+  final String startedAt;
+  final String eta;
+
+  const JobInProgressScreen({
+    Key? key,
+    required this.bookingId,
+    required this.provider,
+    required this.serviceCategory,
+    required this.price,
+    required this.startedAt,
+    required this.eta,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final providerName = provider?['name'] ?? "Unknown Provider";
+    final providerPhoto = provider?['photoUrl'] ?? "https://via.placeholder.com/150";
+
     return Scaffold(
       appBar: AppBar(
-        title: Text("Service In Progress"),
+        title: const Text("Service In Progress"),
         backgroundColor: Colors.white,
         elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black87),
-        titleTextStyle: TextStyle(
+        iconTheme: const IconThemeData(color: Colors.black87),
+        titleTextStyle: const TextStyle(
           color: Colors.black87,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -29,47 +41,87 @@ class JobInProgressScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Profile Photo
             Center(
               child: CircleAvatar(
                 radius: 50,
-                backgroundImage: NetworkImage(provider['photoUrl']),
+                backgroundImage: NetworkImage(providerPhoto),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+
+            // Provider Name
             Center(
               child: Text(
-                provider['name'],
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                providerName,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 6),
+
+            const SizedBox(height: 6),
+
+            // Job Type
             Center(
               child: Text(
-                provider['jobType'],
+                serviceCategory,
                 style: TextStyle(fontSize: 15, color: Colors.grey[600]),
               ),
             ),
-            Divider(height: 32, thickness: 1),
+
+            const Divider(height: 32, thickness: 1),
+
+            // ETA and Time
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _InfoTile(title: "Started At", value: provider['startedAt']),
-                _InfoTile(title: "ETA", value: provider['eta']),
+                _InfoTile(title: "Started At", value: startedAt),
+                _InfoTile(title: "ETA", value: eta),
               ],
             ),
-            SizedBox(height: 24),
+
+            const SizedBox(height: 16),
+
+            // Price
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Price:", style: TextStyle(fontSize: 16)),
+                Text(
+                  "₱${price.toStringAsFixed(2)}",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Booking ID
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text("Booking ID:", style: TextStyle(fontSize: 16)),
+                Text(
+                  bookingId,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // Info Card
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Color(0xFFF5F5F5),
+                color: const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.timer, color: Colors.black54),
-                  SizedBox(width: 12),
-                  Expanded(
+                  const Icon(Icons.timer, color: Colors.black54),
+                  const SizedBox(width: 12),
+                  const Expanded(
                     child: Text(
                       "The service is currently in progress. Please wait until it's completed.",
                       style: TextStyle(fontSize: 15, color: Colors.black87),
@@ -78,26 +130,29 @@ class JobInProgressScreen extends StatelessWidget {
                 ],
               ),
             ),
-            Spacer(),
+
+            const Spacer(),
+
+            // Buttons
             Row(
               children: [
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      // Add contact logic here
+                      // TODO: Add real contact provider logic
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.black,
-                      side: BorderSide(color: Colors.black),
+                      side: const BorderSide(color: Colors.black),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: Text("Contact Provider"),
+                    child: const Text("Contact Provider"),
                   ),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
@@ -106,12 +161,12 @@ class JobInProgressScreen extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
                     ),
-                    child: Text("Mark as Done"),
+                    child: const Text("Mark as Done"),
                   ),
                 ),
               ],
@@ -135,13 +190,13 @@ class _InfoTile extends StatelessWidget {
       children: [
         Text(
           value,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w600,
             color: Colors.black,
           ),
         ),
-        SizedBox(height: 4),
+        const SizedBox(height: 4),
         Text(
           title,
           style: TextStyle(

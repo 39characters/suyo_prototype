@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:suyo_prototype/screens/home_screen.dart';
+import 'package:suyo_prototype/screens/job_in_progress_screen.dart';
 
-class PendingScreen extends StatelessWidget {
+class PendingScreen extends StatefulWidget {
   final Map<String, dynamic>? provider;
-  final String serviceCategory; 
+  final String serviceCategory;
   final double price;
   final String bookingId;
 
@@ -16,11 +20,63 @@ class PendingScreen extends StatelessWidget {
   }) : super(key: key);
 
   @override
+  State<PendingScreen> createState() => _PendingScreenState();
+}
+
+class _PendingScreenState extends State<PendingScreen> {
+  StreamSubscription<DocumentSnapshot>? _bookingSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToBookingStatus();
+  }
+
+  void _listenToBookingStatus() {
+    final bookingRef =
+        FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+
+    _bookingSubscription = bookingRef.snapshots().listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        final status = data['status'];
+
+        if (status == 'accepted') {
+          _bookingSubscription?.cancel();
+
+          final String startedAt = DateFormat('h:mm a').format(DateTime.now());
+          final String eta = widget.provider?['eta'] ?? "30 mins";
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => JobInProgressScreen(
+                bookingId: widget.bookingId,
+                provider: widget.provider,
+                serviceCategory: widget.serviceCategory,
+                price: widget.price,
+                startedAt: startedAt,
+                eta: eta,
+              ),
+            ),
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _bookingSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
         Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => HomeScreen()), // Replace with your actual HomeScreen
+          MaterialPageRoute(builder: (_) => HomeScreen()),
           (Route<dynamic> route) => false,
         );
         return false;
@@ -51,7 +107,7 @@ class PendingScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Service:", style: TextStyle(fontSize: 16)),
-                  Text(serviceCategory, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text(widget.serviceCategory, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -60,7 +116,7 @@ class PendingScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Price:", style: TextStyle(fontSize: 16)),
-                  Text("₱${price.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text("₱${widget.price.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ],
               ),
               const SizedBox(height: 8),
@@ -69,7 +125,7 @@ class PendingScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text("Booking ID:", style: TextStyle(fontSize: 16)),
-                  Text(bookingId, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                  Text(widget.bookingId, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
                 ],
               ),
 
@@ -80,15 +136,15 @@ class PendingScreen extends StatelessWidget {
               const Text("👤 Provider Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
 
-              provider != null
+              widget.provider != null
                   ? Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Name: ${provider!['name']}", style: const TextStyle(fontSize: 16)),
+                        Text("Name: ${widget.provider!['name']}", style: const TextStyle(fontSize: 16)),
                         const SizedBox(height: 4),
-                        Text("Distance: ${provider!['distance']} km", style: const TextStyle(fontSize: 16)),
+                        Text("Distance: ${widget.provider!['distance']} km", style: const TextStyle(fontSize: 16)),
                         const SizedBox(height: 4),
-                        Text("ETA: ${provider!['eta']}", style: const TextStyle(fontSize: 16)),
+                        Text("ETA: ${widget.provider!['eta']}", style: const TextStyle(fontSize: 16)),
                       ],
                     )
                   : const Text(
