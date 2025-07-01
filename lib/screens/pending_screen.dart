@@ -3,7 +3,7 @@ import 'package:suyo_prototype/screens/home_screen.dart';
 
 class PendingScreen extends StatelessWidget {
   final Map<String, dynamic>? provider;
-  final String serviceCategory;
+  final String serviceCategory; 
   final double price;
   final String bookingId;
 
