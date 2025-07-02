@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'provider_home_screen.dart';
 
 class RateCustomerScreen extends StatefulWidget {
   final String bookingId;
@@ -73,7 +74,10 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, ModalRoute.withName('/')); // Go back home
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => ProviderHomeScreen()),
+                  (Route<dynamic> route) => false,
+                );
               },
               child: const Text("OK"),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'home_screen.dart';
 
 class RatingScreen extends StatefulWidget {
   final String bookingId;
@@ -73,13 +74,17 @@ class _RatingScreenState extends State<RatingScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.popUntil(context, ModalRoute.withName('/')); // Go back home
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => HomeScreen()),
+                  (Route<dynamic> route) => false,
+                );
               },
               child: const Text("OK"),
             ),
           ],
         ),
       );
+
     } catch (e) {
       setState(() => _isSubmitting = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error submitting rating: $e")));
