@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
   @override
@@ -10,6 +11,35 @@ class ProviderHomeScreen extends StatefulWidget {
 class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   int _selectedTab = 0;
   final currentUser = FirebaseAuth.instance.currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateLocationIfErrands();
+  }
+
+  Future<void> _updateLocationIfErrands() async {
+    if (currentUser == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).get();
+    final data = doc.data();
+    if (data == null) return;
+
+    if ((data['serviceCategory'] ?? '').toString().toLowerCase() == 'errands') {
+      try {
+        final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        await FirebaseFirestore.instance.collection('users').doc(currentUser!.uid).update({
+          'location': {
+            'lat': position.latitude,
+            'lng': position.longitude,
+          }
+        });
+        print("📍 Provider location updated for errands-type");
+      } catch (e) {
+        print("❌ Failed to get location: $e");
+      }
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {

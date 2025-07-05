@@ -34,6 +34,7 @@ class _BookingScreenState extends State<BookingScreen> {
   @override
   void initState() {
     super.initState();
+    print("🚀 BookingScreen initState triggered");
     _getUserLocation();
   }
 
@@ -65,6 +66,7 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _fetchProviders() async {
+    print("🎯 widget.serviceCategory: ${widget.serviceCategory}");
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .where('userType', isEqualTo: 'Service Provider')

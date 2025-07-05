@@ -15,32 +15,34 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedTab = 0;
   Map<String, dynamic>? _pendingBooking;
   String? _pendingBookingId;
+  bool _hasOngoingBooking = false;
 
   @override
   void initState() {
     super.initState();
-    _checkPendingBooking();
+    _checkPendingOrInProgressBooking();
   }
 
-  Future<void> _checkPendingBooking() async {
+  Future<void> _checkPendingOrInProgressBooking() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final snapshot = await FirebaseFirestore.instance
         .collection('bookings')
         .where('customerId', isEqualTo: user.uid)
-        .where('status', isEqualTo: 'pending')
+        .where('status', whereIn: ['pending', 'accepted'])
         .limit(1)
         .get();
 
     if (snapshot.docs.isNotEmpty) {
       setState(() {
-        print("✅ Pending booking found");
+        print("✅ Ongoing booking found");
         _pendingBooking = snapshot.docs.first.data();
         _pendingBookingId = snapshot.docs.first.id;
+        _hasOngoingBooking = true;
       });
     } else {
-      print("❌ No pending bookings");
+      print("❌ No ongoing bookings");
     }
   }
 
@@ -50,18 +52,21 @@ class _HomeScreenState extends State<HomeScreen> {
       "icon": Icons.local_laundry_service,
       "description": "Need fresh and clean laundry done? Our laundry experts are ready to help.",
       "price": 150.0,
+      "firestoreCategory": "Laundry Service",
     },
     {
       "label": "House Cleaning",
       "icon": Icons.cleaning_services,
       "description": "Need top-rated home cleaners? We’ve got professionals near you.",
       "price": 250.0,
+      "firestoreCategory": "Home Cleaning",
     },
     {
       "label": "Pet Sitting",
       "icon": Icons.pets,
       "description": "Need someone to care for your pets while you’re away? Trusted sitters nearby.",
       "price": 300.0,
+      "firestoreCategory": "Errands",
     },
     {
       "label": "Coming soon",
@@ -99,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ).then((_) {
-                  _checkPendingBooking();
+                  _checkPendingOrInProgressBooking();
                 });
               },
               child: Container(
@@ -145,7 +150,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   final isSelected = index == selectedService;
 
                   return GestureDetector(
-                    onTap: service['disabled'] == true
+                    onTap: service['disabled'] == true || _hasOngoingBooking
                         ? null
                         : () {
                             setState(() => selectedService = index);
@@ -159,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
                           },
                     child: Opacity(
-                      opacity: service['disabled'] == true ? 0.4 : 1,
+                      opacity: service['disabled'] == true || _hasOngoingBooking ? 0.4 : 1,
                       child: ServiceCard(
                         label: service['label'],
                         icon: service['icon'],

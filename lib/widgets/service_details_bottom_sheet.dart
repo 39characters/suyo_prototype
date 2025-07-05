@@ -66,7 +66,7 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => BookingScreen(
-                      serviceCategory: label,
+                      serviceCategory: service['firestoreCategory'],
                       price: price,
                     ),
                   ),
