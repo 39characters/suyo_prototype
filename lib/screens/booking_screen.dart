@@ -1,4 +1,3 @@
-// At the top, make sure these are included:
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -32,6 +31,7 @@ class _BookingScreenState extends State<BookingScreen> {
   String _sortType = 'Nearest';
   bool _isBuffering = false;
   Timer? _debounce;
+  bool _mapInteractionEnabled = true;
 
   @override
   void initState() {
@@ -98,9 +98,7 @@ class _BookingScreenState extends State<BookingScreen> {
   void _filterProvidersByCenter() {
     if (_centerLocation == null) return;
 
-    setState(() {
-      _isBuffering = true;
-    });
+    setState(() => _isBuffering = true);
 
     Future.delayed(const Duration(milliseconds: 300), () {
       final results = allProviders.map((p) {
@@ -118,7 +116,6 @@ class _BookingScreenState extends State<BookingScreen> {
         };
       }).toList();
 
-      // Sort based on dropdown
       if (_sortType == 'Rating') {
         results.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
       } else if (_sortType == 'Smart') {
@@ -153,11 +150,10 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _onCameraMove(CameraPosition position) {
+    if (!_mapInteractionEnabled) return;
     _centerLocation = position.target;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      _filterProvidersByCenter();
-    });
+    _debounce = Timer(const Duration(milliseconds: 500), _filterProvidersByCenter);
   }
 
   @override
@@ -173,16 +169,19 @@ class _BookingScreenState extends State<BookingScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    _loadMapStyle();
-                  },
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  onCameraMove: _onCameraMove,
-                  markers: _buildMarkers(),
+                IgnorePointer(
+                  ignoring: !_mapInteractionEnabled,
+                  child: GoogleMap(
+                    initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      _loadMapStyle();
+                    },
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    onCameraMove: _onCameraMove,
+                    markers: _buildMarkers(),
+                  ),
                 ),
                 Positioned(
                   top: MediaQuery.of(context).size.height * 0.31,
@@ -195,166 +194,172 @@ class _BookingScreenState extends State<BookingScreen> {
                   bottom: 0,
                   left: 0,
                   right: 0,
-                  child: Container(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    height: 340,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Center(
-                          child: Container(
-                            width: 40,
-                            height: 4,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(10),
+                  child: GestureDetector(
+                    onTapDown: (_) => setState(() => _mapInteractionEnabled = false),
+                    onTapUp: (_) => setState(() => _mapInteractionEnabled = true),
+                    onVerticalDragStart: (_) => setState(() => _mapInteractionEnabled = false),
+                    onVerticalDragEnd: (_) => setState(() => _mapInteractionEnabled = true),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+                      ),
+                      padding: const EdgeInsets.all(16),
+                      height: 340,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                color: const Color(0xFF4B2EFF).withOpacity(0.1),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: _sortType,
-                                  dropdownColor: Colors.white,
-                                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                                  items: ['Nearest', 'Rating', 'Smart'].map((value) {
-                                    return DropdownMenuItem(
-                                      value: value,
-                                      child: Text(value),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _sortType = value!;
-                                      _filterProvidersByCenter();
-                                    });
-                                  },
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(20),
+                                  color: const Color(0xFF4B2EFF).withOpacity(0.1),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _sortType,
+                                    dropdownColor: Colors.white,
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                    items: ['Nearest', 'Rating', 'Smart'].map((value) {
+                                      return DropdownMenuItem(
+                                        value: value,
+                                        child: Text(value),
+                                      );
+                                    }).toList(),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _sortType = value!;
+                                        _filterProvidersByCenter();
+                                      });
+                                    },
+                                  ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Expanded(
-                          child: _isBuffering
-                              ? const Center(child: CircularProgressIndicator())
-                              : ListView.separated(
-                                  itemCount: filteredProviders.length,
-                                  separatorBuilder: (_, __) => const Divider(height: 16),
-                                  itemBuilder: (context, index) {
-                                    final p = filteredProviders[index];
-                                    final isSelected = _selectedProvider == p;
-                                    return InkWell(
-                                      onTap: () => setState(() => _selectedProvider = p),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
-                                          borderRadius: BorderRadius.circular(8),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Expanded(
+                            child: _isBuffering
+                                ? const Center(child: CircularProgressIndicator())
+                                : ListView.separated(
+                                    itemCount: filteredProviders.length,
+                                    separatorBuilder: (_, __) => const Divider(height: 16),
+                                    itemBuilder: (context, index) {
+                                      final p = filteredProviders[index];
+                                      final isSelected = _selectedProvider == p;
+                                      return InkWell(
+                                        onTap: () => setState(() => _selectedProvider = p),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
+                                                  Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
+                                                ],
+                                              ),
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
+                                                  const SizedBox(width: 4),
+                                                  Text("${p['rating']}"),
+                                                ],
+                                              )
+                                            ],
+                                          ),
                                         ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      );
+                                    },
+                                  ),
+                          ),
+                          const SizedBox(height: 12),
+                          ElevatedButton(
+                            onPressed: _selectedProvider == null
+                                ? null
+                                : () async {
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (_) => const AlertDialog(
+                                        content: Row(
                                           children: [
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
-                                                Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
-                                              ],
-                                            ),
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
-                                                const SizedBox(width: 4),
-                                                Text("${p['rating']}"),
-                                              ],
-                                            )
+                                            CircularProgressIndicator(),
+                                            SizedBox(width: 16),
+                                            Text("Finding available provider..."),
                                           ],
                                         ),
                                       ),
                                     );
+
+                                    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+                                    final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
+                                      'customerId': uid,
+                                      'providerId': _selectedProvider!['id'],
+                                      'providerName': _selectedProvider!['name'],
+                                      'serviceCategory': widget.serviceCategory,
+                                      'status': 'pending',
+                                      'timestamp': DateTime.now(),
+                                      'location': {
+                                        'lat': _centerLocation?.latitude,
+                                        'lng': _centerLocation?.longitude,
+                                      },
+                                      'price': widget.price,
+                                    });
+
+                                    Navigator.pop(context);
+
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => CustomerPendingScreen(
+                                          provider: _selectedProvider!,
+                                          serviceCategory: widget.serviceCategory,
+                                          price: widget.price,
+                                          location: {
+                                            'lat': _centerLocation?.latitude,
+                                            'lng': _centerLocation?.longitude,
+                                          },
+                                          bookingId: bookingRef.id,
+                                          customerId: uid,
+                                        ),
+                                      ),
+                                    );
                                   },
-                                ),
-                        ),
-                        const SizedBox(height: 12),
-                        ElevatedButton(
-                          onPressed: _selectedProvider == null
-                              ? null
-                              : () async {
-                                  showDialog(
-                                    context: context,
-                                    barrierDismissible: false,
-                                    builder: (_) => const AlertDialog(
-                                      content: Row(
-                                        children: [
-                                          CircularProgressIndicator(),
-                                          SizedBox(width: 16),
-                                          Text("Finding available provider..."),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-
-                                  final uid = FirebaseAuth.instance.currentUser!.uid;
-
-                                  final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
-                                    'customerId': uid,
-                                    'providerId': _selectedProvider!['id'],
-                                    'providerName': _selectedProvider!['name'],
-                                    'serviceCategory': widget.serviceCategory,
-                                    'status': 'pending',
-                                    'timestamp': DateTime.now(),
-                                    'location': {
-                                      'lat': _centerLocation?.latitude,
-                                      'lng': _centerLocation?.longitude,
-                                    },
-                                    'price': widget.price,
-                                  });
-
-                                  Navigator.pop(context);
-
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => CustomerPendingScreen(
-                                        provider: _selectedProvider!,
-                                        serviceCategory: widget.serviceCategory,
-                                        price: widget.price,
-                                        location: {
-                                          'lat': _centerLocation?.latitude,
-                                          'lng': _centerLocation?.longitude,
-                                        },
-                                        bookingId: bookingRef.id,
-                                        customerId: uid,
-                                      ),
-                                    ),
-                                  );
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
-                            minimumSize: const Size.fromHeight(45),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
+                              minimumSize: const Size.fromHeight(45),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
+                            child: const Text("Request Service", style: TextStyle(color: Colors.white)),
                           ),
-                          child: const Text("Request Service", style: TextStyle(color: Colors.white)),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
