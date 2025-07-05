@@ -1,3 +1,4 @@
+// At the top, make sure these are included:
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
@@ -5,8 +6,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
-import 'customer_pending_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'customer_pending_screen.dart';
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -18,7 +19,7 @@ class BookingScreen extends StatefulWidget {
   });
 
   @override
-  _BookingScreenState createState() => _BookingScreenState();
+  State<BookingScreen> createState() => _BookingScreenState();
 }
 
 class _BookingScreenState extends State<BookingScreen> {
@@ -28,13 +29,13 @@ class _BookingScreenState extends State<BookingScreen> {
   Map<String, dynamic>? _selectedProvider;
   List<Map<String, dynamic>> allProviders = [];
   List<Map<String, dynamic>> filteredProviders = [];
+  String _sortType = 'Nearest';
   bool _isBuffering = false;
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
-    print("🚀 BookingScreen initState triggered");
     _getUserLocation();
   }
 
@@ -59,14 +60,12 @@ class _BookingScreenState extends State<BookingScreen> {
     final dLat = _degToRad(lat2 - lat1);
     final dLon = _degToRad(lon2 - lon1);
     final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) *
-            sin(dLon / 2) * sin(dLon / 2);
+        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
 
   Future<void> _fetchProviders() async {
-    print("🎯 widget.serviceCategory: ${widget.serviceCategory}");
     final snapshot = await FirebaseFirestore.instance
         .collection('users')
         .where('userType', isEqualTo: 'Service Provider')
@@ -81,13 +80,14 @@ class _BookingScreenState extends State<BookingScreen> {
 
       final lat = location['lat'].toDouble();
       final lng = location['lng'].toDouble();
+      final rating = data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0;
 
       return {
         "id": doc.id,
         "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
         "lat": lat,
         "lng": lng,
-        "rating": data['rating'] != null ? (data['rating'] as num).toDouble() : 4.5,
+        "rating": rating,
       };
     }).whereType<Map<String, dynamic>>().toList();
 
@@ -102,7 +102,7 @@ class _BookingScreenState extends State<BookingScreen> {
       _isBuffering = true;
     });
 
-    Future.delayed(Duration(seconds: 1), () {
+    Future.delayed(const Duration(milliseconds: 300), () {
       final results = allProviders.map((p) {
         final distance = _calculateDistance(
           _centerLocation!.latitude,
@@ -114,8 +114,22 @@ class _BookingScreenState extends State<BookingScreen> {
           ...p,
           "distance": distance.toStringAsFixed(2),
           "eta": "~${(distance * 2).toStringAsFixed(0)} min",
+          "numericDistance": distance,
         };
       }).toList();
+
+      // Sort based on dropdown
+      if (_sortType == 'Rating') {
+        results.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
+      } else if (_sortType == 'Smart') {
+        results.sort((a, b) {
+          final aScore = (a['numericDistance'] as double) * 0.6 - (a['rating'] as double) * 0.4;
+          final bScore = (b['numericDistance'] as double) * 0.6 - (b['rating'] as double) * 0.4;
+          return aScore.compareTo(bScore);
+        });
+      } else {
+        results.sort((a, b) => (a['numericDistance'] as double).compareTo(b['numericDistance'] as double));
+      }
 
       setState(() {
         filteredProviders = results;
@@ -141,7 +155,7 @@ class _BookingScreenState extends State<BookingScreen> {
   void _onCameraMove(CameraPosition position) {
     _centerLocation = position.target;
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 800), () {
+    _debounce = Timer(const Duration(milliseconds: 500), () {
       _filterProvidersByCenter();
     });
   }
@@ -160,10 +174,7 @@ class _BookingScreenState extends State<BookingScreen> {
           : Stack(
               children: [
                 GoogleMap(
-                  initialCameraPosition: CameraPosition(
-                    target: _userLocation!,
-                    zoom: 15,
-                  ),
+                  initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
                   onMapCreated: (controller) {
                     _mapController = controller;
                     _loadMapStyle();
@@ -191,7 +202,7 @@ class _BookingScreenState extends State<BookingScreen> {
                       boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
                     ),
                     padding: const EdgeInsets.all(16),
-                    height: 280,
+                    height: 340,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -206,35 +217,50 @@ class _BookingScreenState extends State<BookingScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
-                        const Text(
-                          "Nearby Providers",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: const Color(0xFF4B2EFF).withOpacity(0.1),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _sortType,
+                                  dropdownColor: Colors.white,
+                                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                  items: ['Nearest', 'Rating', 'Smart'].map((value) {
+                                    return DropdownMenuItem(
+                                      value: value,
+                                      child: Text(value),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _sortType = value!;
+                                      _filterProvidersByCenter();
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 8),
                         Expanded(
                           child: _isBuffering
-                              ? const Center(
-                                  child: SizedBox(
-                                    height: 50,
-                                    child: ColoredBox(
-                                      color: Color(0xFFEDEBFF),
-                                      child: Center(child: Text("Loading nearby providers...")),
-                                    ),
-                                  ),
-                                )
+                              ? const Center(child: CircularProgressIndicator())
                               : ListView.separated(
                                   itemCount: filteredProviders.length,
                                   separatorBuilder: (_, __) => const Divider(height: 16),
                                   itemBuilder: (context, index) {
                                     final p = filteredProviders[index];
                                     final isSelected = _selectedProvider == p;
-
                                     return InkWell(
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedProvider = p;
-                                        });
-                                      },
+                                      onTap: () => setState(() => _selectedProvider = p),
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(vertical: 8),
                                         decoration: BoxDecoration(
@@ -247,17 +273,8 @@ class _BookingScreenState extends State<BookingScreen> {
                                             Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  p['name'],
-                                                  style: TextStyle(
-                                                    fontWeight: FontWeight.w600,
-                                                    color: isSelected ? const Color(0xFF4B2EFF) : Colors.black,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  "ETA: ${p['eta']} (${p['distance']} km)",
-                                                  style: const TextStyle(fontSize: 12),
-                                                ),
+                                                Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
+                                                Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
                                               ],
                                             ),
                                             Row(
@@ -335,10 +352,7 @@ class _BookingScreenState extends State<BookingScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
-                            "Request Service",
-                            style: TextStyle(color: Colors.white),
-                          ),
+                          child: const Text("Request Service", style: TextStyle(color: Colors.white)),
                         ),
                       ],
                     ),

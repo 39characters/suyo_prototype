@@ -55,7 +55,7 @@ class _HomeScreenState extends State<HomeScreen> {
       "firestoreCategory": "Laundry Service",
     },
     {
-      "label": "House Cleaning",
+      "label": "Home Cleaning",
       "icon": Icons.cleaning_services,
       "description": "Need top-rated home cleaners? We’ve got professionals near you.",
       "price": 250.0,
