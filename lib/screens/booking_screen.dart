@@ -389,7 +389,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                   width: 40,
                                   height: 4,
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF4B2EFF),
+                                    color: const Color(0xDE4B2EFF),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
