@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -21,7 +23,7 @@ class BookingScreen extends StatefulWidget {
   State<BookingScreen> createState() => _BookingScreenState();
 }
 
-class _BookingScreenState extends State<BookingScreen> {
+class _BookingScreenState extends State<BookingScreen> with SingleTickerProviderStateMixin {
   GoogleMapController? _mapController;
   LatLng? _centerLocation;
   LatLng? _userLocation;
@@ -31,11 +33,15 @@ class _BookingScreenState extends State<BookingScreen> {
   String _sortType = 'Nearest';
   bool _isBuffering = false;
   Timer? _debounce;
-  bool _mapInteractionEnabled = true;
+  bool _mapLocked = false;
+
+  late DraggableScrollableController _sheetController;
+  double _sheetSize = 0.35;
 
   @override
   void initState() {
     super.initState();
+    _sheetController = DraggableScrollableController();
     _getUserLocation();
   }
 
@@ -50,7 +56,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _loadMapStyle() async {
     final style = await rootBundle.loadString('assets/map_style.json');
-    _mapController?.setMapStyle(style);
+    if (_mapController != null) {
+      _mapController!.setMapStyle(style);
+    }
   }
 
   double _degToRad(double deg) => deg * (pi / 180);
@@ -150,15 +158,79 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   void _onCameraMove(CameraPosition position) {
-    if (!_mapInteractionEnabled) return;
+    if (_mapLocked) return;
     _centerLocation = position.target;
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 500), _filterProvidersByCenter);
   }
 
+  void _handleBooking() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text("Finding available provider..."),
+          ],
+        ),
+      ),
+    );
+
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+
+    final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
+      'customerId': uid,
+      'providerId': _selectedProvider!['id'],
+      'providerName': _selectedProvider!['name'],
+      'serviceCategory': widget.serviceCategory,
+      'status': 'pending',
+      'timestamp': DateTime.now(),
+      'location': {
+        'lat': _centerLocation?.latitude,
+        'lng': _centerLocation?.longitude,
+      },
+      'price': widget.price,
+    });
+
+    Navigator.pop(context);
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CustomerPendingScreen(
+          provider: _selectedProvider!,
+          serviceCategory: widget.serviceCategory,
+          price: widget.price,
+          location: {
+            'lat': _centerLocation?.latitude,
+            'lng': _centerLocation?.longitude,
+          },
+          bookingId: bookingRef.id,
+          customerId: uid,
+        ),
+      ),
+    );
+  }
+
+  void _toggleSheet() {
+    final newSize = _sheetSize < 0.5 ? 0.85 : 0.35;
+    _sheetController.animateTo(
+      newSize,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeOutExpo,
+    );
+    setState(() {
+      _sheetSize = newSize;
+    });
+  }
+
   @override
   void dispose() {
     _debounce?.cancel();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -169,19 +241,29 @@ class _BookingScreenState extends State<BookingScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                IgnorePointer(
-                  ignoring: !_mapInteractionEnabled,
-                  child: GoogleMap(
-                    initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      _loadMapStyle();
-                    },
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: true,
-                    onCameraMove: _onCameraMove,
-                    markers: _buildMarkers(),
-                  ),
+                GoogleMap(
+                  initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                    _loadMapStyle();
+                  },
+                  onCameraMove: _mapLocked ? null : _onCameraMove,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  markers: _buildMarkers(),
+                  scrollGesturesEnabled: !_mapLocked,
+                  zoomGesturesEnabled: !_mapLocked,
+                  rotateGesturesEnabled: !_mapLocked,
+                  tiltGesturesEnabled: !_mapLocked,
+                  gestureRecognizers: _mapLocked
+                      ? <Factory<OneSequenceGestureRecognizer>>{}.toSet()
+                      : {
+                          Factory(() => EagerGestureRecognizer()),
+                          Factory(() => ScaleGestureRecognizer()),
+                          Factory(() => PanGestureRecognizer()),
+                          Factory(() => VerticalDragGestureRecognizer()),
+                          Factory(() => HorizontalDragGestureRecognizer()),
+                        },
                 ),
                 Positioned(
                   top: MediaQuery.of(context).size.height * 0.31,
@@ -190,176 +272,148 @@ class _BookingScreenState extends State<BookingScreen> {
                     child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTapDown: (_) => setState(() => _mapInteractionEnabled = false),
-                    onTapUp: (_) => setState(() => _mapInteractionEnabled = true),
-                    onVerticalDragStart: (_) => setState(() => _mapInteractionEnabled = false),
-                    onVerticalDragEnd: (_) => setState(() => _mapInteractionEnabled = true),
-                    child: Container(
+                DraggableScrollableSheet(
+                  controller: _sheetController,
+                  initialChildSize: _sheetSize,
+                  minChildSize: 0.2,
+                  maxChildSize: 0.85,
+                  builder: (context, scrollController) {
+                    return Container(
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                         boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
                       ),
                       padding: const EdgeInsets.all(16),
-                      height: 340,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Stack(
                         children: [
-                          Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  color: const Color(0xFF4B2EFF).withOpacity(0.1),
-                                ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _sortType,
-                                    dropdownColor: Colors.white,
-                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                                    items: ['Nearest', 'Rating', 'Smart'].map((value) {
-                                      return DropdownMenuItem(
-                                        value: value,
-                                        child: Text(value),
-                                      );
-                                    }).toList(),
-                                    onChanged: (value) {
-                                      setState(() {
-                                        _sortType = value!;
-                                        _filterProvidersByCenter();
-                                      });
-                                    },
+                              const SizedBox(height: 40),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      color: const Color(0xFF4B2EFF).withOpacity(0.1),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: _sortType,
+                                        dropdownColor: Colors.white,
+                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                        items: ['Nearest', 'Rating', 'Smart'].map((value) {
+                                          return DropdownMenuItem(value: value, child: Text(value));
+                                        }).toList(),
+                                        onChanged: (value) {
+                                          setState(() {
+                                            _sortType = value!;
+                                            _filterProvidersByCenter();
+                                          });
+                                        },
+                                      ),
+                                    ),
                                   ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Expanded(
+                                child: _isBuffering
+                                    ? const Center(child: CircularProgressIndicator())
+                                    : ListView.separated(
+                                        controller: scrollController,
+                                        itemCount: filteredProviders.length,
+                                        separatorBuilder: (_, __) => const Divider(height: 16),
+                                        itemBuilder: (context, index) {
+                                          final p = filteredProviders[index];
+                                          final isSelected = _selectedProvider == p;
+                                          return InkWell(
+                                            onTap: () => setState(() => _selectedProvider = p),
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(vertical: 8),
+                                              decoration: BoxDecoration(
+                                                color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Column(
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
+                                                      Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
+                                                    ],
+                                                  ),
+                                                  Row(
+                                                    children: [
+                                                      const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
+                                                      const SizedBox(width: 4),
+                                                      Text("${p['rating']}"),
+                                                    ],
+                                                  )
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
+                              const SizedBox(height: 12),
+                              ElevatedButton(
+                                onPressed: _selectedProvider == null ? null : _handleBooking,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
+                                  minimumSize: const Size.fromHeight(45),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 ),
+                                child: const Text("Request Service", style: TextStyle(color: Colors.white)),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Expanded(
-                            child: _isBuffering
-                                ? const Center(child: CircularProgressIndicator())
-                                : ListView.separated(
-                                    itemCount: filteredProviders.length,
-                                    separatorBuilder: (_, __) => const Divider(height: 16),
-                                    itemBuilder: (context, index) {
-                                      final p = filteredProviders[index];
-                                      final isSelected = _selectedProvider == p;
-                                      return InkWell(
-                                        onTap: () => setState(() => _selectedProvider = p),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
-                                                  Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
-                                                ],
-                                              ),
-                                              Row(
-                                                children: [
-                                                  const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
-                                                  const SizedBox(width: 4),
-                                                  Text("${p['rating']}"),
-                                                ],
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
+                          Positioned(
+                            top: 0,
+                            left: MediaQuery.of(context).size.width / 2 - 40,
+                            child: GestureDetector(
+                              onTap: _toggleSheet,
+                              behavior: HitTestBehavior.translucent, // makes invisible parts tappable
+                              child: Container(
+                                width: 80,
+                                height: 40, // invisible tappable space
+                                alignment: Alignment.center,
+                                child: Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF4B2EFF),
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                          ),
-                          const SizedBox(height: 12),
-                          ElevatedButton(
-                            onPressed: _selectedProvider == null
-                                ? null
-                                : () async {
-                                    showDialog(
-                                      context: context,
-                                      barrierDismissible: false,
-                                      builder: (_) => const AlertDialog(
-                                        content: Row(
-                                          children: [
-                                            CircularProgressIndicator(),
-                                            SizedBox(width: 16),
-                                            Text("Finding available provider..."),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-
-                                    final uid = FirebaseAuth.instance.currentUser!.uid;
-
-                                    final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
-                                      'customerId': uid,
-                                      'providerId': _selectedProvider!['id'],
-                                      'providerName': _selectedProvider!['name'],
-                                      'serviceCategory': widget.serviceCategory,
-                                      'status': 'pending',
-                                      'timestamp': DateTime.now(),
-                                      'location': {
-                                        'lat': _centerLocation?.latitude,
-                                        'lng': _centerLocation?.longitude,
-                                      },
-                                      'price': widget.price,
-                                    });
-
-                                    Navigator.pop(context);
-
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => CustomerPendingScreen(
-                                          provider: _selectedProvider!,
-                                          serviceCategory: widget.serviceCategory,
-                                          price: widget.price,
-                                          location: {
-                                            'lat': _centerLocation?.latitude,
-                                            'lng': _centerLocation?.longitude,
-                                          },
-                                          bookingId: bookingRef.id,
-                                          customerId: uid,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
-                              minimumSize: const Size.fromHeight(45),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                                ),
                               ),
                             ),
-                            child: const Text("Request Service", style: TextStyle(color: Colors.white)),
                           ),
                         ],
                       ),
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        _mapLocked = !_mapLocked;
+                      });
+                    },
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      _mapLocked ? Icons.lock : Icons.lock_open,
+                      color: const Color(0xFF4B2EFF),
                     ),
                   ),
                 ),
