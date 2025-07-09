@@ -88,7 +88,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
       final lat = location['lat'].toDouble();
       final lng = location['lng'].toDouble();
-      final rating = data['rating'] != null ? (data['rating'] as num).toDouble() : 0.0;
+      final rating = data['rating'] != null ? ((data['rating'] as num).toDouble()).toStringAsFixed(1) : "0.0";
 
       return {
         "id": doc.id,

@@ -13,33 +13,48 @@ class ServiceCard extends StatelessWidget {
     required this.label,
     required this.icon,
     this.isSelected = false,
-    this.iconSize = 40,
-    this.textStyle = const TextStyle(fontSize: 16),
-    this.backgroundColor = Colors.white,
+    this.iconSize = 100,
+    this.textStyle = const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+    this.backgroundColor = const Color(0xFF3A22CC),
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final Color selectedBgColor = Colors.white;
+    final Color selectedIconColor = const Color(0xFF4B2EFF);
+    final Color selectedTextColor = const Color(0xFF4B2EFF);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: isSelected ? selectedBgColor : backgroundColor,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
+            color: Colors.black26,
+            blurRadius: 8,
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: iconSize, color: Colors.white),
-            SizedBox(height: 12),
-            Text(label, style: textStyle.copyWith(color: Colors.white)),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            icon,
+            size: iconSize,
+            color: isSelected ? selectedIconColor : Colors.white,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: textStyle.copyWith(
+              color: isSelected ? selectedTextColor : Colors.white,
+            ),
+          ),
+        ],
       ),
     );
   }

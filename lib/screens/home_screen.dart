@@ -10,18 +10,37 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int selectedService = -1;
   int _selectedTab = 0;
   Map<String, dynamic>? _pendingBooking;
   String? _pendingBookingId;
   bool _hasOngoingBooking = false;
 
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
     _checkPendingOrInProgressBooking();
     debugBookings();
+
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+    _fadeController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   void debugBookings() async {
@@ -90,7 +109,52 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onTabTapped(int index) {
     setState(() {
       _selectedTab = index;
+      _fadeController.reset();
+      _fadeController.forward();
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Widget> _pages = [
+      _buildHomeContent(),
+      _buildReceipts(),
+      _buildProfile(),
+    ];
+
+    return Scaffold(
+      appBar: AppBar(
+        automaticallyImplyLeading: false, // 🔥 removes back button
+        iconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: const Color(0xFF4B2EFF),
+        elevation: 0,
+        toolbarHeight: 56,
+        actions: [
+          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}, color: Colors.white),
+          IconButton(icon: const Icon(Icons.share), onPressed: () {}, color: Colors.white),
+        ],
+      ),
+      backgroundColor: const Color(0xFF4B2EFF),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: _pages[_selectedTab],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF4B2EFF),
+        unselectedItemColor: Colors.grey,
+        currentIndex: _selectedTab,
+        onTap: _onTabTapped,
+        type: BottomNavigationBarType.fixed,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Receipts'),
+          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+        ],
+      ),
+    );
   }
 
   Widget _buildHomeContent() {
@@ -120,7 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Container(
                 width: double.infinity,
-                color: Color(0xFFf56d16),
+                color: const Color(0xFFf56d16),
                 padding: const EdgeInsets.all(12),
                 child: const Text(
                   "⏳ You have a pending request — tap to view",
@@ -164,15 +228,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: service['disabled'] == true || _hasOngoingBooking
                         ? null
                         : () {
-                            setState(() => selectedService = index);
-                            showModalBottomSheet(
-                              context: context,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                              ),
-                              backgroundColor: const Color(0xFF4B2EFF),
-                              builder: (_) => ServiceDetailsBottomSheet(service: service),
-                            );
+                            setState(() {
+                              if (selectedService == index) {
+                                selectedService = -1;
+                              } else {
+                                selectedService = index;
+                                showModalBottomSheet(
+                                  context: context,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                  ),
+                                  backgroundColor: const Color(0xFF4B2EFF),
+                                  builder: (_) => ServiceDetailsBottomSheet(service: service),
+                                ).whenComplete(() {
+                                  // 🧼 Clear selection when popup is closed
+                                  setState(() {
+                                    selectedService = -1;
+                                  });
+                                });
+                              }
+                            });
                           },
                     child: Opacity(
                       opacity: service['disabled'] == true || _hasOngoingBooking ? 0.4 : 1,
@@ -180,9 +255,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         label: service['label'],
                         icon: service['icon'],
                         isSelected: isSelected,
-                        iconSize: 48,
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                        backgroundColor: const Color(0xFF3A22CC),
+                        iconSize: 100,
+                        textStyle: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: isSelected ? const Color(0xFF4B2EFF) : Colors.white,
+                        ),
+                        backgroundColor: isSelected ? Colors.white : const Color(0xFF3A22CC),
                       ),
                     ),
                   );
@@ -194,6 +273,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+
 
   Widget _buildReceipts() {
     final user = FirebaseAuth.instance.currentUser;
@@ -475,42 +555,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> _pages = [
-      _buildHomeContent(),
-      _buildReceipts(),
-      _buildProfile(),
-    ];
-
-    return Scaffold(
-      appBar: AppBar(
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: const Color(0xFF4B2EFF),
-        elevation: 0,
-        toolbarHeight: 56,
-        actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}, color: Colors.white),
-          IconButton(icon: const Icon(Icons.share), onPressed: () {}, color: Colors.white),
-        ],
-      ),
-      backgroundColor: const Color(0xFF4B2EFF),
-      body: IndexedStack(index: _selectedTab, children: _pages),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF4B2EFF),
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Receipts'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
-        ],
-      ),
-    );
-  }
 }
