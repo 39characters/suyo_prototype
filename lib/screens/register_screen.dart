@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -197,6 +198,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _businessNameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   Widget _buildTextField(IconData icon, String hint, TextEditingController controller) {
     return SizedBox(
       width: MediaQuery.of(context).size.width * 0.75,
@@ -260,17 +272,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _businessNameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Color(0xFF4B2EFF),
@@ -281,35 +282,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 180),
+                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 180)
+                    .animate().fadeIn(duration: 500.ms),
                 SizedBox(height: 24),
-                Image.asset('assets/images/SUYO_LOGO.png', height: 60),
+                Image.asset('assets/images/SUYO_LOGO.png', height: 60)
+                    .animate().fadeIn(duration: 500.ms, delay: 200.ms),
                 SizedBox(height: 12),
                 RichText(
                   text: TextSpan(
                     style: TextStyle(fontSize: 16),
                     children: [
-                      TextSpan(
-                        text: "Create ",
-                        style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: "an account!",
-                        style: TextStyle(color: Color(0xFFC7C7C7)),
-                      ),
+                      TextSpan(text: "Create ", style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold)),
+                      TextSpan(text: "an account!", style: TextStyle(color: Color(0xFFC7C7C7))),
                     ],
                   ),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 400.ms),
+
                 SizedBox(height: 32),
-                if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
-                  _buildTextField(Icons.person_outline, "First Name", _firstNameController),
-                  SizedBox(height: 16),
-                  _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
-                ] else ...[
-                  _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
-                ],
+                ...[
+                  if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
+                    _buildTextField(Icons.person_outline, "First Name", _firstNameController),
+                    SizedBox(height: 16),
+                    _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
+                  ] else
+                    _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
+                ].animate(interval: 100.ms),
+
                 SizedBox(height: 16),
-                _buildTextField(Icons.email_outlined, "Email", _emailController),
+                _buildTextField(Icons.email_outlined, "Email", _emailController)
+                    .animate().fadeIn(duration: 500.ms, delay: 600.ms),
                 SizedBox(height: 16),
                 _buildPasswordField(
                   icon: Icons.lock_outline,
@@ -317,7 +318,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _passwordController,
                   isObscured: !_showPassword,
                   toggleVisibility: () => setState(() => _showPassword = !_showPassword),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 700.ms),
                 SizedBox(height: 16),
                 _buildPasswordField(
                   icon: Icons.lock_outline,
@@ -325,7 +326,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _confirmPasswordController,
                   isObscured: !_showConfirmPassword,
                   toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
+
                 SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -353,7 +355,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       backgroundColor: Color(0xFF3A22CC),
                     ),
                   ],
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 900.ms),
+
                 if (_userType == "Service Provider") ...[
                   SizedBox(height: 16),
                   SizedBox(
@@ -386,6 +389,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
+
                 if (_needsLocationPin) ...[
                   SizedBox(height: 16),
                   ElevatedButton.icon(
@@ -402,6 +406,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
+
                 SizedBox(height: 24),
                 SizedBox(
                   height: 50,
@@ -417,7 +422,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 1200.ms),
+
                 SizedBox(height: 16),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
@@ -433,7 +439,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ],
                     ),
                   ),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 1400.ms),
               ],
             ),
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,6 +14,21 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _isLoading = false;
   bool _showPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(() => setState(() {}));
+    _passwordController.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
 
   void _login() async {
     setState(() => _isLoading = true);
@@ -46,27 +62,25 @@ class _LoginScreenState extends State<LoginScreen> {
       String message = 'Wrong credentials. Please try again.';
       if (e.code == 'user-not-found') message = 'No user found with that email.';
       if (e.code == 'wrong-password') message = 'Incorrect password.';
-      _showErrorDialog(message);
+      _showErrorSnackbar(message);
     } catch (e) {
-      _showErrorDialog(e.toString().replaceFirst('Exception: ', ''));
+      _showErrorSnackbar(e.toString().replaceFirst('Exception: ', ''));
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Login Error"),
-        content: Text(message),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
-      ),
+  void _showErrorSnackbar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isInputValid = _emailController.text.trim().isNotEmpty &&
+        _passwordController.text.trim().isNotEmpty;
+
     return Scaffold(
       backgroundColor: const Color(0xFF4B2EFF),
       body: SafeArea(
@@ -76,9 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 280),
+                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 280)
+                    .animate().fadeIn(duration: 500.ms, curve: Curves.easeOut),
                 const SizedBox(height: 24),
-                Image.asset('assets/images/SUYO_LOGO.png', height: 100),
+                Image.asset('assets/images/SUYO_LOGO.png', height: 100)
+                    .animate().fadeIn(duration: 500.ms, delay: 200.ms),
                 const SizedBox(height: 12),
                 RichText(
                   text: const TextSpan(
@@ -90,30 +106,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 400.ms),
 
                 const SizedBox(height: 32),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: _buildTextField(
-                      icon: Icons.person_outline,
-                      hint: "Email",
-                      obscure: false,
-                      controller: _emailController,
-                    ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: _buildTextField(
+                    icon: Icons.person_outline,
+                    hint: "Email",
+                    obscure: false,
+                    controller: _emailController,
                   ),
+                ).animate().fadeIn(duration: 500.ms, delay: 600.ms),
 
                 const SizedBox(height: 16),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.75,
-                    child: _buildTextField(
-                      icon: Icons.lock_outline,
-                      hint: "Password",
-                      obscure: true,
-                      controller: _passwordController,
-                    ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: _buildTextField(
+                    icon: Icons.lock_outline,
+                    hint: "Password",
+                    obscure: true,
+                    controller: _passwordController,
                   ),
-                
+                ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
+
                 const SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -132,23 +148,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text("Forgot Password?", style: TextStyle(color: Colors.white)),
                     )
                   ],
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 1.seconds),
+
                 const SizedBox(height: 16),
-                SizedBox(
-                  height: 50,
-                  width: MediaQuery.of(context).size.width * 0.55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFF56D16),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                AnimatedScale(
+                  scale: _isLoading ? 0.95 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: SizedBox(
+                    height: 50,
+                    width: MediaQuery.of(context).size.width * 0.55,
+                    child: ElevatedButton(
+                      onPressed: (!_isLoading && isInputValid) ? _login : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF56D16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                     ),
-                    child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
-                ),
+                ).animate().fadeIn(duration: 500.ms, delay: 1200.ms),
+
                 const SizedBox(height: 24),
                 RichText(
                   text: TextSpan(
@@ -168,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                )
+                ).animate().fadeIn(duration: 500.ms, delay: 1400.ms),
               ],
             ),
           ),

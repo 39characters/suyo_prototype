@@ -120,7 +120,7 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: Container(
                 width: double.infinity,
-                color: Colors.amber,
+                color: Color(0xFFf56d16),
                 padding: const EdgeInsets.all(12),
                 child: const Text(
                   "⏳ You have a pending request — tap to view",
