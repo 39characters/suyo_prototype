@@ -21,6 +21,20 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _checkPendingOrInProgressBooking();
+    debugBookings();
+  }
+
+  void debugBookings() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final snap = await FirebaseFirestore.instance
+        .collection('bookings')
+        .where('customerId', isEqualTo: uid)
+        .get();
+
+    print("📦 Found ${snap.docs.length} bookings for $uid");
+    for (var doc in snap.docs) {
+      print(doc.data());
+    }
   }
 
   Future<void> _checkPendingOrInProgressBooking() async {
@@ -36,13 +50,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (snapshot.docs.isNotEmpty) {
       setState(() {
-        print("✅ Ongoing booking found");
         _pendingBooking = snapshot.docs.first.data();
         _pendingBookingId = snapshot.docs.first.id;
         _hasOngoingBooking = true;
       });
-    } else {
-      print("❌ No ongoing bookings");
     }
   }
 
@@ -184,21 +195,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildReceipts() => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Your Receipts", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
-            _buildReceiptTile("Laundry Service - ₱150", "June 15, 2025 - Completed"),
-            const SizedBox(height: 12),
-            _buildReceiptTile("Pet Sitting - ₱300", "June 10, 2025 - Completed"),
-          ],
-        ),
-      );
+  Widget _buildReceipts() {
+    final user = FirebaseAuth.instance.currentUser;
 
-  Widget _buildReceiptTile(String title, String subtitle) {
+    return FutureBuilder<QuerySnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('bookings')
+          .where('customerId', isEqualTo: user?.uid)
+          .where('status', isEqualTo: 'completed')
+          .get(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Colors.white));
+        }
+
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(
+            child: Text(
+              "No completed bookings yet.",
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(24),
+          itemCount: snapshot.data!.docs.length,
+          itemBuilder: (context, index) {
+            final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+            final service = data['serviceCategory'];
+            final provider = data['providerName'];
+            final price = data['price'];
+            final completedAt = data['completedAt']?.toDate();
+            final formattedDate = completedAt != null
+                ? "${completedAt.month}/${completedAt.day}/${completedAt.year}"
+                : "Date unknown";
+
+            return Column(
+              children: [
+                _buildReceiptTile("$service - ₱$price", "$provider • $formattedDate", data),
+                const SizedBox(height: 12),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildReceiptTile(String title, String subtitle, Map<String, dynamic> bookingData) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF3A22CC),
@@ -209,24 +254,95 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text(title, style: const TextStyle(color: Colors.white)),
         subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
         trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
-        onTap: () {},
+        onTap: () => _showReceiptDetailsPopup(bookingData),
       ),
     );
   }
 
-  Widget _buildChatLogs() => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Your Chats", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-            const SizedBox(height: 16),
-            _buildChatTile("Anna's Cleaners", "Thanks again for booking with us!"),
-            const SizedBox(height: 12),
-            _buildChatTile("Kuya Jon's Service", "On the way now."),
-          ],
+  void _showReceiptDetailsPopup(Map<String, dynamic> data) {
+    final completedAt = data['completedAt']?.toDate();
+    final dateStr = completedAt != null
+        ? "${completedAt.month}/${completedAt.day}/${completedAt.year} ${completedAt.hour}:${completedAt.minute.toString().padLeft(2, '0')}"
+        : "Unknown";
+
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Center(
+                  child: Text(
+                    "Booking Summary",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                _infoRow("Service", data['serviceCategory']),
+                _infoRow("Provider", data['providerName']),
+                _infoRow("Price", "₱${data['price']}"),
+                _infoRow("Completed At", dateStr),
+                _infoRow("Rating", "${data['customerRating'] ?? 'N/A'} / 5"),
+                _infoRow("Feedback", data['customerFeedback']?.isNotEmpty == true ? data['customerFeedback'] : "No feedback"),
+                _infoRow("Location", "${data['location']['lat']}, ${data['location']['lng']}"),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4B2EFF),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: const Text("Close", style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.black87,
+              fontSize: 15,
+            ),
+          ),
+          const Divider(height: 20),
+        ],
+      ),
+    );
+  }
 
   Widget _buildChatTile(String title, String subtitle) {
     return Container(
@@ -259,38 +375,103 @@ class _HomeScreenState extends State<HomeScreen> {
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
-        final userType = data['userType'];
-        final displayName = userType == 'Customer'
-            ? "${data['firstName']} ${data['lastName']}"
-            : data['businessName'] ?? "${data['firstName']} ${data['lastName']}";
+        final displayName = "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+        final rating = (data['rating'] ?? 0).toDouble();
+        final ratingCount = data['ratingCount'] ?? 0;
 
         return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.person, size: 72, color: Colors.white70),
-              const SizedBox(height: 16),
-              Text(
-                displayName,
-                style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  Navigator.pushReplacementNamed(context, '/');
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFF56D16),
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(32),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3420B3),
+                    borderRadius: BorderRadius.circular(32),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.15),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF4B2EFF),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.person, size: 60, color: Colors.white),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        displayName,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        "Customer",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.white70,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildRatingStars(rating),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${rating.toStringAsFixed(1)} / 5 from $ratingCount ratings",
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
-                child: const Text("Sign Out", style: TextStyle(color: Colors.white)),
-              ),
-            ],
+                const SizedBox(height: 32),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pushReplacementNamed(context, '/');
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  label: const Text("Sign Out", style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF56D16),
+                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRatingStars(double rating) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (index) {
+        return Icon(
+          index < rating.round()
+              ? Icons.star
+              : index < rating ? Icons.star_half : Icons.star_border,
+          color: Colors.amber,
+          size: 28,
+        );
+      }),
     );
   }
 
@@ -299,7 +480,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> _pages = [
       _buildHomeContent(),
       _buildReceipts(),
-      _buildChatLogs(),
       _buildProfile(),
     ];
 
@@ -328,7 +508,6 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Receipts'),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: 'Chat'),
           BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
         ],
       ),
