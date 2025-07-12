@@ -29,7 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-
   void _login() async {
     setState(() => _isLoading = true);
     try {
@@ -131,23 +130,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
 
                 const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Checkbox(
-                          value: _rememberMe,
-                          onChanged: (value) => setState(() => _rememberMe = value ?? false),
-                        ),
-                        const Text("Remember Me", style: TextStyle(color: Colors.white)),
-                      ],
-                    ),
-                    TextButton(
-                      onPressed: () {},
-                      child: const Text("Forgot Password?", style: TextStyle(color: Colors.white)),
-                    )
-                  ],
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.75,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: _rememberMe,
+                            onChanged: (value) => setState(() => _rememberMe = value ?? false),
+                          ),
+                          const Text("Remember Me", style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: const Text("Forgot Password?", style: TextStyle(color: Colors.white)),
+                      )
+                    ],
+                  ),
                 ).animate().fadeIn(duration: 500.ms, delay: 1.seconds),
 
                 const SizedBox(height: 16),

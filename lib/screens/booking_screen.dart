@@ -38,6 +38,11 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   late DraggableScrollableController _sheetController;
   double _sheetSize = 0.35;
 
+  final _formKey = GlobalKey<FormState>();
+  String customerName = '';
+  String phone = '';
+  String address = '';
+
   @override
   void initState() {
     super.initState();
@@ -52,6 +57,98 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     _centerLocation = _userLocation;
     await _loadMapStyle();
     await _fetchProviders();
+    await _askUserDetails();
+  }
+
+  Future<void> _askUserDetails() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.white,
+        elevation: 20,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Enter Your Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4B2EFF))),
+                const SizedBox(height: 20),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Full Name'),
+                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+                  onSaved: (v) => customerName = v!.trim(),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Phone Number'),
+                  keyboardType: TextInputType.phone,
+                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+                  onSaved: (v) => phone = v!.trim(),
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Complete Address'),
+                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
+                  onSaved: (v) => address = v!.trim(),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        if (_formKey.currentState!.validate()) {
+                          _formKey.currentState!.save();
+                          Navigator.pop(context, true);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4B2EFF),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Submit', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    if (result != true) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Go back?"),
+          content: const Text("You need to provide your details to continue."),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Stay")),
+            TextButton(
+              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+              child: const Text("Go Home"),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _askUserDetails();
+      }
+    }
   }
 
   Future<void> _loadMapStyle() async {
@@ -95,7 +192,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
         "lat": lat,
         "lng": lng,
-        "rating": rating,
+        "rating": double.tryParse(rating) ?? 0.0,
       };
     }).whereType<Map<String, dynamic>>().toList();
 
@@ -193,6 +290,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         'lng': _centerLocation?.longitude,
       },
       'price': widget.price,
+      'customerName': customerName,
+      'phone': phone,
+      'address': address,
     });
 
     Navigator.pop(context);
@@ -215,6 +315,33 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     );
   }
 
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  Future<bool> _onWillPop() async {
+    return await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text("Cancel Booking?"),
+        content: const Text("Are you sure you want to go back? Your selected location will be lost."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Stay"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Go Back"),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   void _toggleSheet() {
     final newSize = _sheetSize < 0.5 ? 0.85 : 0.35;
     _sheetController.animateTo(
@@ -228,50 +355,95 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   }
 
   @override
-  void dispose() {
-    _debounce?.cancel();
-    _sheetController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: _userLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                GoogleMap(
-                  initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    _loadMapStyle();
-                  },
-                  onCameraMove: _mapLocked ? null : _onCameraMove,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: true,
-                  markers: _buildMarkers(),
-                  scrollGesturesEnabled: !_mapLocked,
-                  zoomGesturesEnabled: !_mapLocked,
-                  rotateGesturesEnabled: !_mapLocked,
-                  tiltGesturesEnabled: !_mapLocked,
-                  gestureRecognizers: _mapLocked
-                      ? <Factory<OneSequenceGestureRecognizer>>{}.toSet()
-                      : {
-                          Factory(() => EagerGestureRecognizer()),
-                          Factory(() => ScaleGestureRecognizer()),
-                          Factory(() => PanGestureRecognizer()),
-                          Factory(() => VerticalDragGestureRecognizer()),
-                          Factory(() => HorizontalDragGestureRecognizer()),
-                        },
-                ),
-                Positioned(
-                  top: MediaQuery.of(context).size.height * 0.31,
-                  left: MediaQuery.of(context).size.width / 2 - 25,
-                  child: const IgnorePointer(
-                    child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        body: _userLocation == null
+            ? const Center(child: CircularProgressIndicator())
+            : Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: CameraPosition(target: _userLocation!, zoom: 15),
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      _loadMapStyle();
+                    },
+                    onCameraMove: _mapLocked ? null : _onCameraMove,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: true,
+                    markers: _buildMarkers(),
+                    scrollGesturesEnabled: !_mapLocked,
+                    zoomGesturesEnabled: !_mapLocked,
+                    rotateGesturesEnabled: !_mapLocked,
+                    tiltGesturesEnabled: !_mapLocked,
+                    gestureRecognizers: _mapLocked
+                        ? <Factory<OneSequenceGestureRecognizer>>{}.toSet()
+                        : {
+                            Factory(() => EagerGestureRecognizer()),
+                            Factory(() => ScaleGestureRecognizer()),
+                            Factory(() => PanGestureRecognizer()),
+                            Factory(() => VerticalDragGestureRecognizer()),
+                            Factory(() => HorizontalDragGestureRecognizer()),
+                          },
                   ),
-                ),
+
+                  // AppBar
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    child: AppBar(
+                      backgroundColor: const Color(0xFF4B2EFF),
+                      elevation: 0,
+                      leading: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () async {
+                          final goBack = await _onWillPop();
+                          if (goBack) Navigator.pop(context);
+                        },
+                      ),
+                      title: RichText(
+                        text: TextSpan(
+                          style: const TextStyle(color: Colors.white, fontSize: 20),
+                          children: [
+                            const TextSpan(text: 'Booking for '),
+                            TextSpan(
+                              text: "${widget.serviceCategory}",
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                      centerTitle: true,
+                    ),
+                  ),
+
+                  // Slightly lower pointer
+                  Positioned(
+                    top: MediaQuery.of(context).size.height * 0.34,
+                    left: MediaQuery.of(context).size.width / 2 - 25,
+                    child: const IgnorePointer(
+                      child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
+                    ),
+                  ),
+
+                  // Lock button moved down
+                  Positioned(
+                    top: 100,
+                    right: 20,
+                    child: FloatingActionButton(
+                      onPressed: () {
+                        setState(() => _mapLocked = !_mapLocked);
+                      },
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        _mapLocked ? Icons.lock : Icons.lock_open,
+                        color: const Color(0xFF4B2EFF),
+                      ),
+                    ),
+                  ),
+                // Provider sheet (unchanged)
                 DraggableScrollableSheet(
                   controller: _sheetController,
                   initialChildSize: _sheetSize,
@@ -380,10 +552,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             left: MediaQuery.of(context).size.width / 2 - 40,
                             child: GestureDetector(
                               onTap: _toggleSheet,
-                              behavior: HitTestBehavior.translucent, // makes invisible parts tappable
+                              behavior: HitTestBehavior.translucent,
                               child: Container(
                                 width: 80,
-                                height: 40, // invisible tappable space
+                                height: 40,
                                 alignment: Alignment.center,
                                 child: Container(
                                   width: 40,
@@ -401,24 +573,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                     );
                   },
                 ),
-                Positioned(
-                  top: 40,
-                  right: 20,
-                  child: FloatingActionButton(
-                    onPressed: () {
-                      setState(() {
-                        _mapLocked = !_mapLocked;
-                      });
-                    },
-                    backgroundColor: Colors.white,
-                    child: Icon(
-                      _mapLocked ? Icons.lock : Icons.lock_open,
-                      color: const Color(0xFF4B2EFF),
-                    ),
-                  ),
-                ),
               ],
             ),
+      ),
     );
   }
 }

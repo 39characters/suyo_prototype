@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../screens/booking_screen.dart';
+import '../screens/errand_booking_screen.dart';
 
 class ServiceDetailsBottomSheet extends StatelessWidget {
   final Map<String, dynamic> service;
@@ -19,7 +20,7 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$label Services',
+            '$label',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 22,
@@ -27,9 +28,11 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'Average ETA: 40 mins.',
-            style: TextStyle(
+          Text(
+            price != null
+                ? 'Starts at ₱${price.toStringAsFixed(2)}'
+                : 'Price not available',
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 16,
             ),
@@ -54,27 +57,35 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                if (price == null) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("This service is missing a price.")),
+                final category = service['firestoreCategory'];
+                final price = service['price'];
+
+                if (category == "Errands") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ErrandBookingScreen(
+                        serviceCategory: category,
+                        price: price,
+                      ),
+                    ),
                   );
-                  return;
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BookingScreen(
+                        serviceCategory: category,
+                        price: price,
+                      ),
+                    ),
+                  );
                 }
 
-                Navigator.pop(context); // Close the bottom sheet
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BookingScreen(
-                      serviceCategory: service['firestoreCategory'],
-                      price: price,
-                    ),
-                  ),
-                );
               },
               child: const Text(
                 'Proceed',
-                style: TextStyle(fontSize: 16, color: Colors.white),
+                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
           ),

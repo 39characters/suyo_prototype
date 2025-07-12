@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
   @override
@@ -10,6 +11,81 @@ class ProviderHomeScreen extends StatefulWidget {
 class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   int _selectedTab = 0;
   final currentUser = FirebaseAuth.instance.currentUser;
+  bool locationReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkIfErrandProviderAndRequestLocation();
+  }
+
+  Future<void> _checkIfErrandProviderAndRequestLocation() async {
+    final uid = currentUser?.uid;
+    if (uid == null) return;
+
+    final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final isErrands = (data['serviceCategory'] ?? '').toString().toLowerCase() == 'errands';
+
+    if (!isErrands) {
+      setState(() => locationReady = true);
+      return;
+    }
+
+    while (!locationReady && mounted) {
+      final result = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text("📍 Location Required"),
+          content: const Text("As an errands provider, you must allow location access to receive jobs."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'allow'),
+              child: const Text("Allow Location"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'sign_out'),
+              child: const Text("Sign Out"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'not_now'),
+              child: const Text("Not Now"),
+            ),
+          ],
+        ),
+      );
+
+      if (result == 'sign_out') {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) Navigator.pushReplacementNamed(context, '/');
+        return;
+      }
+
+      if (result == 'allow') {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+
+        if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+          try {
+            await Geolocator.getCurrentPosition();
+            setState(() => locationReady = true);
+          } catch (e) {
+            print("❌ Location access error: $e");
+          }
+        }
+      }
+
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.always || permission == LocationPermission.whileInUse) {
+        setState(() => locationReady = true);
+      }
+    }
+  }
 
   void _onTabTapped(int index) {
     setState(() {
@@ -34,16 +110,12 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
         'providerAcceptedAt': Timestamp.now(),
       });
 
-      print("✔️ Booking $bookingId status updated to accepted by provider $uid");
-
       if (!mounted) return;
 
       Navigator.pushNamed(
         context,
         '/providerInProgress',
-        arguments: {
-          'bookingId': bookingId,
-        },
+        arguments: {'bookingId': bookingId},
       );
     } catch (e) {
       print("❌ Error accepting job: $e");
@@ -130,7 +202,6 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     );
   }
 
-
   Widget _buildReceipts() {
     final uid = currentUser?.uid;
     return FutureBuilder<QuerySnapshot>(
@@ -145,7 +216,6 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
         }
 
         final bookings = snapshot.data!.docs;
-
         if (bookings.isEmpty) {
           return const Center(child: Text("No completed jobs", style: TextStyle(color: Colors.white70)));
         }
@@ -161,7 +231,6 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                 : "Date unknown";
             final price = data['price'] ?? 0;
             final service = data['serviceCategory'] ?? 'Service';
-            final customer = data['customerId'];
 
             return Card(
               color: const Color(0xFF3A22CC),
@@ -260,19 +329,11 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(32),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3420B3), // 🔵 darker purple card
+                    color: const Color(0xFF3420B3),
                     borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      )
-                    ],
                   ),
                   child: Column(
                     children: [
-                      // 🎯 Profile icon with matching theme background
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: const BoxDecoration(
@@ -325,13 +386,12 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                   ),
                 ),
               ],
-              ),
             ),
-          );
-        },
-      );
+          ),
+        );
+      },
+    );
   }
-
 
   Widget _buildRatingStars(double rating) {
     return Row(
@@ -365,7 +425,9 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
         centerTitle: true,
       ),
       backgroundColor: const Color(0xFF4B2EFF),
-      body: IndexedStack(index: _selectedTab, children: pages),
+      body: locationReady
+          ? IndexedStack(index: _selectedTab, children: pages)
+          : const Center(child: CircularProgressIndicator(color: Colors.white)),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedTab,
         onTap: _onTabTapped,

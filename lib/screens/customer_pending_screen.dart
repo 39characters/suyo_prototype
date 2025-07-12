@@ -29,11 +29,22 @@ class CustomerPendingScreen extends StatefulWidget {
 
 class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
   StreamSubscription<DocumentSnapshot>? _bookingSubscription;
+  Timer? _timer;
+  int _elapsedSeconds = 0;
 
   @override
   void initState() {
     super.initState();
     _listenToBookingStatus();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        _elapsedSeconds++;
+      });
+    });
   }
 
   void _listenToBookingStatus() {
@@ -46,9 +57,14 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
 
         if (status == 'accepted') {
           _bookingSubscription?.cancel();
+          _timer?.cancel();
 
           final String startedAt = DateFormat('h:mm a').format(DateTime.now());
           final String eta = widget.provider?['eta'] ?? "30 mins";
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('🎉 A provider has accepted your booking!')),
+          );
 
           Navigator.pushReplacement(
             context,
@@ -90,7 +106,27 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
   @override
   void dispose() {
     _bookingSubscription?.cancel();
+    _timer?.cancel();
     super.dispose();
+  }
+
+  Widget _infoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16)),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  String _formatElapsed(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -106,10 +142,7 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
       child: Scaffold(
         appBar: AppBar(
           iconTheme: const IconThemeData(color: Colors.white),
-          title: const Text(
-            'Pending Booking',
-            style: TextStyle(color: Colors.white),
-          ),
+          title: const Text('Pending Booking', style: TextStyle(color: Colors.white)),
           backgroundColor: const Color(0xFF4B2EFF),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -124,70 +157,104 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
         backgroundColor: Colors.white,
         body: Padding(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: ListView(
             children: [
-              const Text("📦 Booking Details", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Service:", style: TextStyle(fontSize: 16)),
-                  Text(widget.serviceCategory, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Price:", style: TextStyle(fontSize: 16)),
-                  Text("₱${widget.price.toStringAsFixed(2)}", style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Booking ID:", style: TextStyle(fontSize: 16)),
-                  Text(widget.bookingId, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-
-              const Text("👤 Provider Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-
-              widget.provider != null
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Name: ${widget.provider!['name']}", style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 4),
-                        Text("Distance: ${widget.provider!['distance']} km", style: const TextStyle(fontSize: 16)),
-                        const SizedBox(height: 4),
-                        Text("ETA: ${widget.provider!['eta']}", style: const TextStyle(fontSize: 16)),
-                      ],
-                    )
-                  : const Text(
-                      "Provider has not yet accepted the request.",
-                      style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
+              Center(
+                child: Column(
+                  children: [
+                    const Text("⏳ Waiting for a provider...", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text("Elapsed: ${_formatElapsed(_elapsedSeconds)}", style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic)),
+                    const SizedBox(height: 24),
+                    const SizedBox(
+                      width: 80,
+                      height: 80,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 6,
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4B2EFF)),
+                      ),
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 4,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("📦 Booking Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      _infoRow("Service", widget.serviceCategory),
+                      _infoRow("Price", "₱${widget.price.toStringAsFixed(2)}"),
+                      _infoRow("Booking ID", widget.bookingId),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              Card(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 3,
+                color: const Color(0xFFF1F3FF),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: widget.provider != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text("👤 Provider Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 12),
+                            Text("Name: ${widget.provider!['name']}", style: const TextStyle(fontSize: 16)),
+                            const SizedBox(height: 4),
+                            Text("Distance: ${widget.provider!['distance']} km", style: const TextStyle(fontSize: 16)),
+                            const SizedBox(height: 4),
+                            Text("ETA: ${widget.provider!['eta']}", style: const TextStyle(fontSize: 16)),
+                          ],
+                        )
+                      : Column(
+                          children: const [
+                            Text("No provider has accepted yet.",
+                                style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic)),
+                          ],
+                        ),
+                ),
+              ),
             ],
           ),
         ),
-
-        /// 👇 Cancel Button Placed at Bottom
         bottomNavigationBar: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16),
             child: ElevatedButton.icon(
-              onPressed: _cancelBooking,
+              onPressed: () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text("Cancel Booking"),
+                    content: const Text("Are you sure you want to cancel this booking?"),
+                    actions: [
+                      TextButton(
+                        child: const Text("No"),
+                        onPressed: () => Navigator.pop(context, false),
+                      ),
+                      ElevatedButton(
+                        child: const Text("Yes"),
+                        onPressed: () => Navigator.pop(context, true),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (confirm == true) {
+                  _cancelBooking();
+                }
+              },
               icon: const Icon(Icons.cancel, color: Colors.white),
               label: const Text("Cancel Booking", style: TextStyle(color: Colors.white)),
               style: ElevatedButton.styleFrom(
