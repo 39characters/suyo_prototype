@@ -19,6 +19,7 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
   Duration _elapsed = Duration.zero;
   late SharedPreferences _prefs;
   late AnimationController _animationController;
+  DateTime? _startTime;
 
   @override
   void initState() {
@@ -42,6 +43,8 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
       _prefs.setInt('${widget.bookingId}_startTime', startTime.millisecondsSinceEpoch);
     }
 
+    _startTime = startTime;
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         _elapsed = DateTime.now().difference(startTime);
@@ -57,7 +60,6 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
     return {
       'id': customerId,
       'name': "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim(),
-      'photoUrl': data['photoUrl'] ?? "https://via.placeholder.com/150",
       'phone': data['phone'] ?? '',
       'address': data['address'] ?? '',
     };
@@ -152,9 +154,14 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
           builder: (context, customerSnapshot) {
             final customer = customerSnapshot.data ?? {};
             final customerName = customer['name'] ?? 'Loading...';
-            final photoUrl = customer['photoUrl'] ?? '';
             final customerPhone = customer['phone'] ?? '';
             final customerAddress = customer['address'] ?? '';
+
+            final formattedStartTime = _startTime != null
+                ? TimeOfDay.fromDateTime(_startTime!).format(context)
+                : '--:--';
+            final eta = _startTime != null ? _startTime!.add(const Duration(minutes: 45)) : null;
+            final formattedETA = eta != null ? TimeOfDay.fromDateTime(eta).format(context) : '--:--';
 
             return Scaffold(
               appBar: AppBar(
@@ -175,13 +182,20 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          CircleAvatar(
+                          const CircleAvatar(
                             radius: 55,
-                            backgroundColor: Colors.grey.shade600,
-                            backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                            backgroundColor: Color(0xFF4B2EFF), // Purple background
+                            child: Icon(Icons.person, size: 40, color: Colors.white), // White icon
                           ),
-                          if (photoUrl.isEmpty)
-                            const Icon(Icons.person, size: 40, color: Colors.white),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: CircleAvatar(
+                              radius: 14,
+                              backgroundColor: Colors.white,
+                              child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -195,12 +209,22 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                           style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                     ),
                     const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _MiniInfoColumn(title: "Start Time", value: formattedStartTime),
+                        _MiniInfoColumn(title: "ETA", value: formattedETA),
+                        _MiniInfoColumn(title: "Timer", value: _formatDuration(_elapsed)),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     _InfoTile(title: "Booking ID", value: widget.bookingId),
                     _InfoTile(title: "Phone", value: customerPhone),
                     _InfoTile(title: "Address", value: customerAddress),
-                    _InfoTile(title: "Location", value: "(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})"),
+                    _InfoTile(
+                        title: "Location",
+                        value: "(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})"),
                     _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
-                    _InfoTile(title: "Timer", value: _formatDuration(_elapsed)),
                     const SizedBox(height: 24),
                     Container(
                       width: double.infinity,
@@ -334,6 +358,26 @@ class _InfoTile extends StatelessWidget {
           Flexible(
             child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontSize: 15)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniInfoColumn extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _MiniInfoColumn({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 14)),
         ],
       ),
     );

@@ -334,7 +334,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
               left: 0,
               right: 0,
               child: AppBar(
-                backgroundColor: Colors.white,
+                backgroundColor: Color(0xFF4B2EFF),
                 elevation: 2,
                 leading: isWaiting
                     ? null
@@ -344,7 +344,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                       ),
                 title: const Text(
                   'Errand Booking',
-                  style: TextStyle(color: Color(0xFF4B2EFF), fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                 ),
                 centerTitle: true,
               ),
@@ -413,7 +413,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                   opacity: _overlayFadeController.drive(CurveTween(curve: Curves.easeInOutCubic)),
                   child: Container(
                     alignment: Alignment.center,
-                    color: const Color(0xAA2C1FCC),
+                    color: const Color(0xE61a1a1a),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

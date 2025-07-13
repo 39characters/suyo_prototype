@@ -58,14 +58,12 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
       _prefs.setInt('${widget.bookingId}_startTime', startTime.millisecondsSinceEpoch);
     }
 
-    // Start the timer
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         _elapsed = DateTime.now().difference(startTime);
       });
     });
   }
-
 
   @override
   void dispose() {
@@ -136,7 +134,6 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
         final eta = startTime.add(const Duration(minutes: 45));
         final formattedETA = TimeOfDay.fromDateTime(eta).format(context);
 
-
         final rawProvider = bookingData['provider'] ?? widget.provider ?? {};
         final providerData = (rawProvider is Map)
             ? Map<String, dynamic>.from(rawProvider)
@@ -151,7 +148,6 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
           );
         }
 
-        final providerPhoto = providerData['photoUrl'] ?? "";
         final providerType = providerData['serviceCategory'] ?? "";
         final providerName = providerType == "Errands"
             ? "${providerData['firstName'] ?? ''} ${providerData['lastName'] ?? ''}".trim()
@@ -180,15 +176,20 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        CircleAvatar(
+                        const CircleAvatar(
                           radius: 55,
-                          backgroundColor: Colors.grey.shade600,
-                          backgroundImage: providerPhoto.isNotEmpty
-                              ? NetworkImage(providerPhoto)
-                              : null,
+                          backgroundColor: Color(0xFF4B2EFF),
+                          child: Icon(Icons.person, size: 40, color: Colors.white),
                         ),
-                        if (providerPhoto.isEmpty)
-                          const Icon(Icons.person, size: 40, color: Colors.white),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Colors.white,
+                            child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -202,7 +203,6 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                         style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                   ),
                   const SizedBox(height: 20),
-
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -211,9 +211,7 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                       _MiniInfoColumn(title: "Timer", value: _formatDuration(_elapsed)),
                     ],
                   ),
-
                   const SizedBox(height: 20),
-
                   _InfoTile(title: "Price", value: "₱${widget.price.toStringAsFixed(2)}"),
                   _InfoTile(title: "Booking ID", value: widget.bookingId),
                   _InfoTile(
@@ -223,7 +221,6 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                   _InfoTile(title: "Customer Name", value: customerName),
                   _InfoTile(title: "Phone", value: customerPhone),
                   _InfoTile(title: "Address", value: customerAddress),
-
                   const SizedBox(height: 24),
                   Container(
                     width: double.infinity,

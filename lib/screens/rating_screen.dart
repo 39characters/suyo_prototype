@@ -133,7 +133,6 @@ class _RatingScreenState extends State<RatingScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     final providerName = widget.provider?['name'] ?? "Provider";
-    final providerPhoto = widget.provider?['photoUrl'] ?? "https://via.placeholder.com/150";
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -168,9 +167,10 @@ class _RatingScreenState extends State<RatingScreen> with SingleTickerProviderSt
                     ),
                   ],
                 ),
-                child: CircleAvatar(
+                child: const CircleAvatar(
                   radius: 45,
-                  backgroundImage: NetworkImage(providerPhoto),
+                  backgroundColor: Color(0xFF4B2EFF),
+                  child: Icon(Icons.person, color: Colors.white, size: 40),
                 ),
               ),
               const SizedBox(height: 12),

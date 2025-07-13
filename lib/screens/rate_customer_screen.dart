@@ -21,7 +21,8 @@ class RateCustomerScreen extends StatefulWidget {
   State<RateCustomerScreen> createState() => _RateCustomerScreenState();
 }
 
-class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTickerProviderStateMixin {
+class _RateCustomerScreenState extends State<RateCustomerScreen>
+    with SingleTickerProviderStateMixin {
   int _rating = 0;
   bool _isSubmitting = false;
   final TextEditingController _feedbackController = TextEditingController();
@@ -50,7 +51,8 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTick
 
     setState(() => _isSubmitting = true);
 
-    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+    final bookingRef =
+        FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
     final customerId = widget.customer?['id'];
 
     try {
@@ -61,7 +63,8 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTick
       });
 
       if (customerId != null) {
-        final customerRef = FirebaseFirestore.instance.collection('users').doc(customerId);
+        final customerRef =
+            FirebaseFirestore.instance.collection('users').doc(customerId);
 
         await FirebaseFirestore.instance.runTransaction((transaction) async {
           final snapshot = await transaction.get(customerRef);
@@ -72,7 +75,8 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTick
           final ratingCount = (data['ratingCount'] ?? 0) as int;
 
           final newRatingCount = ratingCount + 1;
-          final newRating = ((currentRating * ratingCount) + _rating) / newRatingCount;
+          final newRating =
+              ((currentRating * ratingCount) + _rating) / newRatingCount;
 
           transaction.update(customerRef, {
             'rating': newRating,
@@ -128,7 +132,6 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTick
   @override
   Widget build(BuildContext context) {
     final customerName = widget.customer?['name'] ?? "Customer";
-    final customerPhoto = widget.customer?['photoUrl'] ?? "https://via.placeholder.com/150";
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -163,9 +166,10 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> with SingleTick
                     ),
                   ],
                 ),
-                child: CircleAvatar(
+                child: const CircleAvatar(
                   radius: 45,
-                  backgroundImage: NetworkImage(customerPhoto),
+                  backgroundColor: Color(0xFF4B2EFF),
+                  child: Icon(Icons.person, color: Colors.white, size: 40),
                 ),
               ),
               const SizedBox(height: 12),
