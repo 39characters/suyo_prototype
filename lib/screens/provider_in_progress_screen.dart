@@ -1,11 +1,54 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'rate_customer_screen.dart';
 
-class ProviderInProgressScreen extends StatelessWidget {
+class ProviderInProgressScreen extends StatefulWidget {
   final String bookingId;
 
   const ProviderInProgressScreen({Key? key, required this.bookingId}) : super(key: key);
+
+  @override
+  State<ProviderInProgressScreen> createState() => _ProviderInProgressScreenState();
+}
+
+class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
+    with SingleTickerProviderStateMixin {
+  late Timer _timer;
+  Duration _elapsed = Duration.zero;
+  late SharedPreferences _prefs;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..forward();
+
+    _initializeTimer();
+  }
+
+  Future<void> _initializeTimer() async {
+    _prefs = await SharedPreferences.getInstance();
+    final startMillis = _prefs.getInt('${widget.bookingId}_startTime');
+    DateTime startTime;
+
+    if (startMillis != null) {
+      startTime = DateTime.fromMillisecondsSinceEpoch(startMillis);
+    } else {
+      startTime = DateTime.now();
+      _prefs.setInt('${widget.bookingId}_startTime', startTime.millisecondsSinceEpoch);
+    }
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      setState(() {
+        _elapsed = DateTime.now().difference(startTime);
+      });
+    });
+  }
 
   Future<Map<String, dynamic>> _getCustomerData(String customerId) async {
     final doc = FirebaseFirestore.instance.collection('users').doc(customerId);
@@ -16,6 +59,8 @@ class ProviderInProgressScreen extends StatelessWidget {
       'id': customerId,
       'name': "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim(),
       'photoUrl': data['photoUrl'] ?? "https://via.placeholder.com/150",
+      'phone': data['phone'] ?? '',
+      'address': data['address'] ?? '',
     };
   }
 
@@ -31,64 +76,70 @@ class ProviderInProgressScreen extends StatelessWidget {
         title: const Text("Confirm Completion"),
         content: const Text("Are you sure the service is fully completed?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Yes, Complete"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes, Complete")),
         ],
       ),
     );
 
     if (confirm != true) return;
 
-    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(bookingId);
+    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
     await bookingRef.update({
       'status': 'completed',
       'completedAt': Timestamp.now(),
     });
   }
 
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    return [
+      if (hours > 0) hours.toString().padLeft(2, '0'),
+      minutes.toString().padLeft(2, '0'),
+      seconds.toString().padLeft(2, '0'),
+    ].join(':');
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _timer.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance.collection('bookings').doc(bookingId).snapshots(),
+      stream: FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId).snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         final booking = snapshot.data!.data() as Map<String, dynamic>?;
         if (booking == null) {
-          return const Scaffold(
-            body: Center(child: Text("Booking not found.")),
-          );
+          return const Scaffold(body: Center(child: Text("Booking not found.")));
         }
 
         final status = booking['status'] ?? '';
-        if (status == 'completed') {
-          final serviceCategory = booking['serviceCategory'] ?? 'Unknown';
-          final price = (booking['price'] ?? 0).toDouble();
-          final customerId = booking['customerId'];
+        final serviceCategory = booking['serviceCategory'] ?? 'Unknown';
+        final price = (booking['price'] ?? 0).toDouble();
+        final lat = booking['location']?['lat'] ?? 0.0;
+        final lng = booking['location']?['lng'] ?? 0.0;
+        final customerId = booking['customerId'] ?? '';
 
+        if (status == 'completed') {
           return FutureBuilder<Map<String, dynamic>>(
             future: _getCustomerData(customerId),
             builder: (context, customerSnapshot) {
               if (!customerSnapshot.hasData) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
+                return const Scaffold(body: Center(child: CircularProgressIndicator()));
               }
-
               final customer = customerSnapshot.data ?? {};
-
               return RateCustomerScreen(
-                bookingId: bookingId,
+                bookingId: widget.bookingId,
                 customer: customer,
                 serviceCategory: serviceCategory,
                 price: price,
@@ -97,42 +148,58 @@ class ProviderInProgressScreen extends StatelessWidget {
           );
         }
 
-        final lat = booking['location']?['lat'] ?? 0.0;
-        final lng = booking['location']?['lng'] ?? 0.0;
-        final serviceCategory = booking['serviceCategory'] ?? 'Unknown';
-        final price = (booking['price'] ?? 0).toDouble();
-        final customerId = booking['customerId'];
-
         return FutureBuilder<Map<String, dynamic>>(
           future: _getCustomerData(customerId),
           builder: (context, customerSnapshot) {
             final customer = customerSnapshot.data ?? {};
             final customerName = customer['name'] ?? 'Loading...';
+            final photoUrl = customer['photoUrl'] ?? '';
+            final customerPhone = customer['phone'] ?? '';
+            final customerAddress = customer['address'] ?? '';
 
             return Scaffold(
               appBar: AppBar(
                 automaticallyImplyLeading: false,
-                iconTheme: const IconThemeData(color: Colors.white),
-                title: const Text("Job In Progress", style: TextStyle(color: Colors.white)),
+                title: const Text("Service In Progress", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 backgroundColor: const Color(0xFF4B2EFF),
-                elevation: 1,
               ),
               backgroundColor: Colors.white,
               body: Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CircleAvatar(
+                            radius: 55,
+                            backgroundColor: Colors.grey.shade600,
+                            backgroundImage: photoUrl.isNotEmpty ? NetworkImage(photoUrl) : null,
+                          ),
+                          if (photoUrl.isEmpty)
+                            const Icon(Icons.person, size: 40, color: Colors.white),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Center(child: Text(customerName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
+                    Center(child: Text(serviceCategory, style: TextStyle(fontSize: 16, color: Colors.grey.shade600))),
                     const SizedBox(height: 16),
-                    _InfoRow(label: "🛠️ Service", value: serviceCategory),
-                    const SizedBox(height: 12),
-                    _InfoRow(label: "💰 Price", value: "₱${price.toStringAsFixed(2)}"),
-                    const SizedBox(height: 12),
-                    _InfoRow(label: "📍 Location", value: "${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)}"),
-                    const SizedBox(height: 12),
-                    _InfoRow(label: "👤 Customer", value: customerName),
+                    _InfoTile(title: "Booking ID", value: widget.bookingId),
+                    _InfoTile(title: "Phone", value: customerPhone),
+                    _InfoTile(title: "Address", value: customerAddress),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _InfoTile(title: "Timer", value: _formatDuration(_elapsed)),
+                        _InfoTile(title: "Location", value: "(${lat.toStringAsFixed(2)}, ${lng.toStringAsFixed(2)})"),
+                        _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
+                      ],
+                    ),
                     const SizedBox(height: 24),
-
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16),
@@ -153,9 +220,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const Spacer(),
-
                     Row(
                       children: [
                         Expanded(
@@ -166,9 +231,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF4B2EFF),
                               side: const BorderSide(color: Color(0xFF4B2EFF)),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             child: const Text("Contact Customer"),
@@ -187,9 +250,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                               backgroundColor: const Color(0xFF4B2EFF),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             child: const Text("Mark as Done"),
                           ),
@@ -225,7 +286,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                                             ],
                                           ),
                                         );
-                                        print("🚨 Panic button triggered for booking $bookingId");
+                                        print("🚨 Panic button triggered for booking ${widget.bookingId}");
                                       },
                                     ),
                                   ],
@@ -236,9 +297,7 @@ class ProviderInProgressScreen extends StatelessWidget {
                               backgroundColor: const Color(0xFFb05a4f),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                             child: const Text("Panic"),
                           ),
@@ -256,20 +315,25 @@ class ProviderInProgressScreen extends StatelessWidget {
   }
 }
 
-class _InfoRow extends StatelessWidget {
-  final String label;
+class _InfoTile extends StatelessWidget {
+  final String title;
   final String value;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoTile({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 16)),
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("$title:", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+          Flexible(
+            child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontSize: 15)),
+          ),
+        ],
+      ),
     );
   }
 }

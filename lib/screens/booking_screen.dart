@@ -60,6 +60,119 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     await _askUserDetails();
   }
 
+  Future<void> _loadMapStyle() async {
+    final style = await rootBundle.loadString('assets/map_style.json');
+    if (_mapController != null) {
+      _mapController!.setMapStyle(style);
+    }
+  }
+
+  double _degToRad(double deg) => deg * (pi / 180);
+
+  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371;
+    final dLat = _degToRad(lat2 - lat1);
+    final dLon = _degToRad(lon2 - lon1);
+    final a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
+  }
+
+  Future<void> _fetchProviders() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('userType', isEqualTo: 'Service Provider')
+        .where('serviceCategory', isEqualTo: widget.serviceCategory)
+        .get();
+
+    final results = snapshot.docs.map((doc) {
+      final data = doc.data();
+      final location = data['location'];
+
+      if (location == null || location['lat'] == null || location['lng'] == null) return null;
+
+      final lat = location['lat'].toDouble();
+      final lng = location['lng'].toDouble();
+      final rating = data['rating'] != null
+          ? ((data['rating'] as num).toDouble()).toStringAsFixed(1)
+          : "0.0";
+
+      return {
+        "id": doc.id,
+        "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
+        "lat": lat,
+        "lng": lng,
+        "rating": double.tryParse(rating) ?? 0.0,
+      };
+    }).whereType<Map<String, dynamic>>().toList();
+
+    allProviders = results;
+    _filterProvidersByCenter();
+  }
+
+  void _filterProvidersByCenter() {
+    if (_centerLocation == null) return;
+
+    setState(() => _isBuffering = true);
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final results = allProviders.map((p) {
+        final distance = _calculateDistance(
+          _centerLocation!.latitude,
+          _centerLocation!.longitude,
+          p['lat'],
+          p['lng'],
+        );
+        return {
+          ...p,
+          "distance": distance.toStringAsFixed(2),
+          "eta": "~${(distance * 2).toStringAsFixed(0)} min",
+          "numericDistance": distance,
+        };
+      }).toList();
+
+      if (_sortType == 'Rating') {
+        results.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
+      } else if (_sortType == 'Smart') {
+        results.sort((a, b) {
+          final aScore = (a['numericDistance'] as double) * 0.6 - (a['rating'] as double) * 0.4;
+          final bScore = (b['numericDistance'] as double) * 0.6 - (b['rating'] as double) * 0.4;
+          return aScore.compareTo(bScore);
+        });
+      } else {
+        results.sort((a, b) =>
+            (a['numericDistance'] as double).compareTo(b['numericDistance'] as double));
+      }
+
+      setState(() {
+        filteredProviders = results;
+        _isBuffering = false;
+      });
+    });
+  }
+
+  Set<Marker> _buildMarkers() {
+    return filteredProviders.map((p) {
+      return Marker(
+        markerId: MarkerId(p['name']),
+        position: LatLng(p['lat'], p['lng']),
+        infoWindow: InfoWindow(
+          title: p['name'],
+          snippet: 'ETA: ${p['eta']} (${p['distance']} km)',
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+      );
+    }).toSet();
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    if (_mapLocked) return;
+    _centerLocation = position.target;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), _filterProvidersByCenter);
+  }
+
   Future<void> _askUserDetails() async {
     await Future.delayed(const Duration(milliseconds: 500));
     final result = await showDialog<bool>(
@@ -151,116 +264,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     }
   }
 
-  Future<void> _loadMapStyle() async {
-    final style = await rootBundle.loadString('assets/map_style.json');
-    if (_mapController != null) {
-      _mapController!.setMapStyle(style);
-    }
-  }
-
-  double _degToRad(double deg) => deg * (pi / 180);
-
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371;
-    final dLat = _degToRad(lat2 - lat1);
-    final dLon = _degToRad(lon2 - lon1);
-    final a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(_degToRad(lat1)) * cos(_degToRad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
-    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
-  }
-
-  Future<void> _fetchProviders() async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('users')
-        .where('userType', isEqualTo: 'Service Provider')
-        .where('serviceCategory', isEqualTo: widget.serviceCategory)
-        .get();
-
-    final results = snapshot.docs.map((doc) {
-      final data = doc.data();
-      final location = data['location'];
-
-      if (location == null || location['lat'] == null || location['lng'] == null) return null;
-
-      final lat = location['lat'].toDouble();
-      final lng = location['lng'].toDouble();
-      final rating = data['rating'] != null ? ((data['rating'] as num).toDouble()).toStringAsFixed(1) : "0.0";
-
-      return {
-        "id": doc.id,
-        "name": data['businessName'] ?? "${data['firstName']} ${data['lastName']}",
-        "lat": lat,
-        "lng": lng,
-        "rating": double.tryParse(rating) ?? 0.0,
-      };
-    }).whereType<Map<String, dynamic>>().toList();
-
-    allProviders = results;
-    _filterProvidersByCenter();
-  }
-
-  void _filterProvidersByCenter() {
-    if (_centerLocation == null) return;
-
-    setState(() => _isBuffering = true);
-
-    Future.delayed(const Duration(milliseconds: 300), () {
-      final results = allProviders.map((p) {
-        final distance = _calculateDistance(
-          _centerLocation!.latitude,
-          _centerLocation!.longitude,
-          p['lat'],
-          p['lng'],
-        );
-        return {
-          ...p,
-          "distance": distance.toStringAsFixed(2),
-          "eta": "~${(distance * 2).toStringAsFixed(0)} min",
-          "numericDistance": distance,
-        };
-      }).toList();
-
-      if (_sortType == 'Rating') {
-        results.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
-      } else if (_sortType == 'Smart') {
-        results.sort((a, b) {
-          final aScore = (a['numericDistance'] as double) * 0.6 - (a['rating'] as double) * 0.4;
-          final bScore = (b['numericDistance'] as double) * 0.6 - (b['rating'] as double) * 0.4;
-          return aScore.compareTo(bScore);
-        });
-      } else {
-        results.sort((a, b) => (a['numericDistance'] as double).compareTo(b['numericDistance'] as double));
-      }
-
-      setState(() {
-        filteredProviders = results;
-        _isBuffering = false;
-      });
-    });
-  }
-
-  Set<Marker> _buildMarkers() {
-    return filteredProviders.map((p) {
-      return Marker(
-        markerId: MarkerId(p['name']),
-        position: LatLng(p['lat'], p['lng']),
-        infoWindow: InfoWindow(
-          title: p['name'],
-          snippet: 'ETA: ${p['eta']} (${p['distance']} km)',
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-      );
-    }).toSet();
-  }
-
-  void _onCameraMove(CameraPosition position) {
-    if (_mapLocked) return;
-    _centerLocation = position.target;
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), _filterProvidersByCenter);
-  }
-
   void _handleBooking() async {
     showDialog(
       context: context,
@@ -281,7 +284,10 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     final bookingRef = await FirebaseFirestore.instance.collection('bookings').add({
       'customerId': uid,
       'providerId': _selectedProvider!['id'],
-      'providerName': _selectedProvider!['name'],
+      'provider': {
+        'id': _selectedProvider!['id'],
+        'name': _selectedProvider!['name'],
+      },
       'serviceCategory': widget.serviceCategory,
       'status': 'pending',
       'timestamp': DateTime.now(),

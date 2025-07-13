@@ -17,7 +17,7 @@ class RateCustomerScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _RateCustomerScreenState createState() => _RateCustomerScreenState();
+  State<RateCustomerScreen> createState() => _RateCustomerScreenState();
 }
 
 class _RateCustomerScreenState extends State<RateCustomerScreen> {
@@ -34,7 +34,6 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
     final customerId = widget.customer?['id'];
 
     try {
-      // Save rating & feedback to booking document
       await bookingRef.update({
         'customerRating': _rating,
         'customerFeedback': _feedbackController.text.trim(),
@@ -44,7 +43,6 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
       if (customerId != null) {
         final customerRef = FirebaseFirestore.instance.collection('users').doc(customerId);
 
-        // Update customer's average rating
         await FirebaseFirestore.instance.runTransaction((transaction) async {
           final snapshot = await transaction.get(customerRef);
           if (!snapshot.exists) return;
@@ -73,10 +71,10 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close dialog
+                Navigator.pop(context);
                 Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(builder: (_) => ProviderHomeScreen()),
-                  (Route<dynamic> route) => false,
+                  (route) => false,
                 );
               },
               child: const Text("OK"),
@@ -86,7 +84,9 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
       );
     } catch (e) {
       setState(() => _isSubmitting = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error submitting rating: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error submitting rating: $e")),
+      );
     }
   }
 
@@ -177,7 +177,9 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
             ElevatedButton(
               onPressed: (_rating == 0 || _isSubmitting) ? null : _submitRating,
               style: ElevatedButton.styleFrom(
-                backgroundColor: (_rating == 0 || _isSubmitting) ? Colors.grey : const Color(0xFF4B2EFF),
+                backgroundColor: (_rating == 0 || _isSubmitting)
+                    ? Colors.grey
+                    : const Color(0xFF4B2EFF),
                 minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -185,7 +187,8 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
               ),
               child: _isSubmitting
                   ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Submit Rating", style: TextStyle(color: Colors.white, fontSize: 16)),
+                  : const Text("Submit Rating",
+                      style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ],
         ),
@@ -193,4 +196,3 @@ class _RateCustomerScreenState extends State<RateCustomerScreen> {
     );
   }
 }
-    

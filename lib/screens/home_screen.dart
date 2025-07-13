@@ -303,9 +303,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
             final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-            final service = data['serviceCategory'];
-            final provider = data['providerName'];
-            final price = data['price'];
+
+            final service = data['serviceCategory'] ?? 'Unknown Service';
+            final price = data['price'] ?? 0;
+
+            // 🛡️ Safely handle both new and old provider formats
+            String provider = "Unknown Provider";
+            if (data.containsKey('provider') && data['provider'] is Map) {
+              provider = data['provider']['name'] ?? "Unknown Provider";
+            } else if (data.containsKey('providerName')) {
+              provider = data['providerName'];
+            }
+
             final completedAt = data['completedAt']?.toDate();
             final formattedDate = completedAt != null
                 ? "${completedAt.month}/${completedAt.day}/${completedAt.year}"
@@ -369,7 +378,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 const SizedBox(height: 20),
                 _infoRow("Service", data['serviceCategory']),
-                _infoRow("Provider", data['providerName']),
+                _infoRow(
+                  "Provider",
+                  data['provider'] is Map
+                      ? (data['provider']['name'] ?? 'Unknown Provider')
+                      : (data['providerName'] ?? 'Unknown Provider'),
+                ),
                 _infoRow("Price", "₱${data['price']}"),
                 _infoRow("Completed At", dateStr),
                 _infoRow("Rating", "${data['customerRating'] ?? 'N/A'} / 5"),
@@ -451,6 +465,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
+          Future.delayed(Duration.zero, () {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => AlertDialog(
+                title: const Text("Session Expired"),
+                content: const Text("Your user session has expired. Please log in again."),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      await FirebaseAuth.instance.signOut();
+                      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                    },
+                    child: const Text("OK"),
+                  ),
+                ],
+              ),
+            );
+          });
+
           return const Center(child: Text("User data not found", style: TextStyle(color: Colors.white)));
         }
 
@@ -539,6 +573,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       },
     );
   }
+
 
   Widget _buildRatingStars(double rating) {
     return Row(
