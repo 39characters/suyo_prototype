@@ -43,7 +43,6 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
-
     _initializeTimer();
   }
 
@@ -59,12 +58,14 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
       _prefs.setInt('${widget.bookingId}_startTime', startTime.millisecondsSinceEpoch);
     }
 
+    // Start the timer
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       setState(() {
         _elapsed = DateTime.now().difference(startTime);
       });
     });
   }
+
 
   @override
   void dispose() {
@@ -126,9 +127,19 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
           );
         }
 
+        final startMillis = _prefs.getInt('${widget.bookingId}_startTime');
+        final startTime = startMillis != null
+            ? DateTime.fromMillisecondsSinceEpoch(startMillis)
+            : DateTime.now();
+
+        final formattedStartTime = TimeOfDay.fromDateTime(startTime).format(context);
+        final eta = startTime.add(const Duration(minutes: 45));
+        final formattedETA = TimeOfDay.fromDateTime(eta).format(context);
+
+
         final rawProvider = bookingData['provider'] ?? widget.provider ?? {};
-        final providerData = (rawProvider is Map) 
-            ? Map<String, dynamic>.from(rawProvider) 
+        final providerData = (rawProvider is Map)
+            ? Map<String, dynamic>.from(rawProvider)
             : <String, dynamic>{};
 
         if (bookingData['status'] == 'completed') {
@@ -140,8 +151,11 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
           );
         }
 
-        final providerName = providerData['name'] ?? "Unknown Provider";
         final providerPhoto = providerData['photoUrl'] ?? "";
+        final providerType = providerData['serviceCategory'] ?? "";
+        final providerName = providerType == "Errands"
+            ? "${providerData['firstName'] ?? ''} ${providerData['lastName'] ?? ''}".trim()
+            : providerData['name'] ?? "Unknown Provider";
 
         final customerName = bookingData['customerName'] ?? 'N/A';
         final customerPhone = bookingData['phone'] ?? 'N/A';
@@ -188,74 +202,28 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                         style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
                   ),
                   const SizedBox(height: 20),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _InfoTile(title: "Started", value: widget.startedAt),
-                      _InfoTile(title: "ETA", value: widget.eta),
-                      _InfoTile(title: "Timer", value: _formatDuration(_elapsed)),
+                      _MiniInfoColumn(title: "Start Time", value: formattedStartTime),
+                      _MiniInfoColumn(title: "ETA", value: formattedETA),
+                      _MiniInfoColumn(title: "Timer", value: _formatDuration(_elapsed)),
                     ],
                   ),
+
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Price:", style: TextStyle(fontSize: 16)),
-                      Text("₱${widget.price.toStringAsFixed(2)}",
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Booking ID:", style: TextStyle(fontSize: 16)),
-                      Text(widget.bookingId, style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Location:", style: TextStyle(fontSize: 16)),
-                      Text(
-                        "(${widget.location['lat'].toStringAsFixed(4)}, ${widget.location['lng'].toStringAsFixed(4)})",
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Customer Name:", style: TextStyle(fontSize: 16)),
-                      Text(customerName, style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Phone:", style: TextStyle(fontSize: 16)),
-                      Text(customerPhone, style: const TextStyle(fontSize: 16)),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Address:", style: TextStyle(fontSize: 16)),
-                      Expanded(
-                        child: Text(
-                          customerAddress,
-                          style: const TextStyle(fontSize: 16),
-                          textAlign: TextAlign.right,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                        ),
-                      ),
-                    ],
-                  ),
+
+                  _InfoTile(title: "Price", value: "₱${widget.price.toStringAsFixed(2)}"),
+                  _InfoTile(title: "Booking ID", value: widget.bookingId),
+                  _InfoTile(
+                      title: "Location",
+                      value:
+                          "(${widget.location['lat'].toStringAsFixed(4)}, ${widget.location['lng'].toStringAsFixed(4)})"),
+                  _InfoTile(title: "Customer Name", value: customerName),
+                  _InfoTile(title: "Phone", value: customerPhone),
+                  _InfoTile(title: "Address", value: customerAddress),
+
                   const SizedBox(height: 24),
                   Container(
                     width: double.infinity,
@@ -324,11 +292,12 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                                     child: const Text("Trigger"),
                                     onPressed: () {
                                       Navigator.pop(context);
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                        content: Text("Emergency alert triggered."),
-                                        backgroundColor: Colors.red,
-                                      ));
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text("Emergency alert triggered."),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
                                     },
                                   ),
                                 ],
@@ -356,6 +325,26 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
   }
 }
 
+class _MiniInfoColumn extends StatelessWidget {
+  final String title;
+  final String value;
+
+  const _MiniInfoColumn({required this.title, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontSize: 14)),
+        ],
+      ),
+    );
+  }
+}
+
 class _InfoTile extends StatelessWidget {
   final String title;
   final String value;
@@ -364,12 +353,15 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 4),
-        Text(title, style: TextStyle(color: Colors.grey.shade600)),
-      ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("$title:", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          Flexible(child: Text(value, style: const TextStyle(fontSize: 15))),
+        ],
+      ),
     );
   }
 }

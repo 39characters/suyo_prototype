@@ -102,12 +102,24 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
 
   Future<void> _acceptBooking(String bookingId, Map<String, dynamic> job) async {
     final uid = currentUser?.uid;
+    if (uid == null) return;
 
     try {
+      final providerSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final providerData = providerSnapshot.data();
+
+      final providerName = providerData?['businessName'] ??
+          "${providerData?['firstName'] ?? ''} ${providerData?['lastName'] ?? ''}".trim();
+
       await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
         'status': 'accepted',
         'providerId': uid,
         'providerAcceptedAt': Timestamp.now(),
+        'provider': {
+          'id': uid,
+          'name': providerName,
+          'photoUrl': providerData?['photoUrl'], // optional
+        },
       });
 
       if (!mounted) return;
@@ -121,6 +133,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
       print("❌ Error accepting job: $e");
     }
   }
+
 
   Widget _buildJobList() {
     return StreamBuilder<QuerySnapshot>(

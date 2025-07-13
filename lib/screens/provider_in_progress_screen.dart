@@ -27,7 +27,6 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..forward();
-
     _initializeTimer();
   }
 
@@ -160,7 +159,10 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
             return Scaffold(
               appBar: AppBar(
                 automaticallyImplyLeading: false,
-                title: const Text("Service In Progress", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                title: const Text(
+                  "Service In Progress",
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                ),
                 backgroundColor: const Color(0xFF4B2EFF),
               ),
               backgroundColor: Colors.white,
@@ -184,21 +186,21 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Center(child: Text(customerName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
-                    Center(child: Text(serviceCategory, style: TextStyle(fontSize: 16, color: Colors.grey.shade600))),
-                    const SizedBox(height: 16),
+                    Center(
+                      child: Text(customerName,
+                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    ),
+                    Center(
+                      child: Text(serviceCategory,
+                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                    ),
+                    const SizedBox(height: 20),
                     _InfoTile(title: "Booking ID", value: widget.bookingId),
                     _InfoTile(title: "Phone", value: customerPhone),
                     _InfoTile(title: "Address", value: customerAddress),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _InfoTile(title: "Timer", value: _formatDuration(_elapsed)),
-                        _InfoTile(title: "Location", value: "(${lat.toStringAsFixed(2)}, ${lng.toStringAsFixed(2)})"),
-                        _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
-                      ],
-                    ),
+                    _InfoTile(title: "Location", value: "(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})"),
+                    _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
+                    _InfoTile(title: "Timer", value: _formatDuration(_elapsed)),
                     const SizedBox(height: 24),
                     Container(
                       width: double.infinity,
@@ -226,7 +228,7 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              // TODO: Add contact logic
+                              // TODO: Implement contact logic
                             },
                             style: OutlinedButton.styleFrom(
                               foregroundColor: const Color(0xFF4B2EFF),
@@ -328,7 +330,7 @@ class _InfoTile extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("$title:", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+          Text("$title:", style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
           Flexible(
             child: Text(value, textAlign: TextAlign.end, style: const TextStyle(fontSize: 15)),
           ),

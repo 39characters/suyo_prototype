@@ -166,12 +166,10 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
 
     final uid = FirebaseAuth.instance.currentUser!.uid;
 
-    // ⬇️ Save Booking Document
+    // Save Booking Document using nested 'provider' structure
     final bookingDoc = await FirebaseFirestore.instance.collection('bookings').add({
       'customerId': uid,
-      'customerName': customerName,
-      'phone': phone,
-      'address': address,
+      'provider': null, // initially no provider
       'serviceCategory': widget.serviceCategory,
       'status': 'pending',
       'timestamp': DateTime.now(),
@@ -180,9 +178,12 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
         'lng': _centerLocation?.longitude,
       },
       'price': widget.price,
+      'customerName': customerName,
+      'phone': phone,
+      'address': address,
     });
 
-    // ⬇️ Update User Document with latest info
+    // Save updated user info
     await FirebaseFirestore.instance.collection('users').doc(uid).update({
       'fullName': customerName,
       'phone': phone,
@@ -194,8 +195,12 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
       isWaiting = true;
     });
 
-    // ⬇️ Listen for provider acceptance
-    bookingListener = FirebaseFirestore.instance.collection('bookings').doc(bookingId!).snapshots().listen((snap) {
+    // Wait for provider to accept
+    bookingListener = FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId!)
+        .snapshots()
+        .listen((snap) {
       final data = snap.data();
       if (data != null && data['status'] == 'accepted') {
         _circleController.stop();
@@ -213,9 +218,9 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                     context,
                     MaterialPageRoute(
                       builder: (_) => CustomerPendingScreen(
-                        provider: {
+                        provider: data['provider'] ?? {
                           'id': data['providerId'],
-                          'name': data['providerName'],
+                          'name': "Your Provider",
                         },
                         serviceCategory: widget.serviceCategory,
                         price: widget.price,
@@ -234,6 +239,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
       }
     });
   }
+
 
   Future<void> _cancelBooking() async {
     final confirm = await showDialog<bool>(
