@@ -288,31 +288,23 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                               showDialog(
                                 context: context,
                                 builder: (_) => AlertDialog(
-                                  title: const Text("Emergency"),
-                                  content: const Text("Are you sure you want to trigger the panic alert?"),
+                                  title: const Text("Panic Alert"),
+                                  content: const Text("Trigger emergency alert?"),
                                   actions: [
                                     TextButton(
                                       child: const Text("Cancel"),
                                       onPressed: () => Navigator.pop(context),
                                     ),
                                     TextButton(
-                                      child: const Text("Yes, Trigger"),
+                                      child: const Text("Trigger"),
                                       onPressed: () {
                                         Navigator.pop(context);
-                                        showDialog(
-                                          context: context,
-                                          builder: (_) => AlertDialog(
-                                            title: const Text("Alert Sent"),
-                                            content: const Text("Support has been notified. Stay safe."),
-                                            actions: [
-                                              TextButton(
-                                                child: const Text("OK"),
-                                                onPressed: () => Navigator.pop(context),
-                                              ),
-                                            ],
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            content: Text("Emergency alert triggered."),
+                                            backgroundColor: Colors.red,
                                           ),
                                         );
-                                        print("🚨 Panic button triggered for booking ${widget.bookingId}");
                                       },
                                     ),
                                   ],
@@ -321,11 +313,10 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                             },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFb05a4f),
-                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
-                            child: const Text("Panic"),
+                            child: const Text("Panic", style: TextStyle(color: Colors.white)),
                           ),
                         ),
                       ],
