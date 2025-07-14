@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/job_in_progress_screen.dart';
@@ -12,17 +13,18 @@ import 'screens/register_screen.dart';
 import 'screens/provider_home_screen.dart';
 import 'screens/customer_pending_screen.dart';
 import 'screens/provider_in_progress_screen.dart';
-import 'screens/rate_customer_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(SuyoApp());
+  runApp(const SuyoApp());
 }
 
 class SuyoApp extends StatelessWidget {
+  const SuyoApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -33,94 +35,147 @@ class SuyoApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF4B2EFF),
         fontFamily: 'Roboto',
       ),
-      home: LoginScreen(),
-      routes: {
-        '/home': (context) => HomeScreen(),
-        '/register': (context) => RegisterScreen(),
-        '/providerHome': (context) => ProviderHomeScreen(),
+      home: InternetGate(child: LoginScreen()),
 
-        // ✅ CUSTOMER PENDING
+      routes: {
+        '/home': (context) => InternetGate(child: HomeScreen()),
+        '/register': (context) => InternetGate(child: RegisterScreen()),
+        '/providerHome': (context) => InternetGate(child: ProviderHomeScreen()),
+
         '/pending': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          if (args == null) {
-            return const Scaffold(
-              body: Center(child: Text("❌ Missing or invalid arguments for /pending")),
-            );
-          }
-          return CustomerPendingScreen(
-            provider: args['provider'],
-            serviceCategory: args['serviceCategory'],
-            price: (args['price'] ?? 0.0) as double,
-            location: args['location'] ?? {},
-            bookingId: args['bookingId'],
-            customerId: args['customerId'],
-          );
+          return args == null
+              ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /pending")))
+              : InternetGate(
+                  child: CustomerPendingScreen(
+                    provider: args['provider'],
+                    serviceCategory: args['serviceCategory'],
+                    price: (args['price'] ?? 0.0) as double,
+                    location: args['location'] ?? {},
+                    bookingId: args['bookingId'],
+                    customerId: args['customerId'],
+                  ),
+                );
         },
 
-        // ✅ CUSTOMER IN PROGRESS
         '/inprogress': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          if (args == null) {
-            return const Scaffold(
-              body: Center(child: Text("❌ Missing or invalid arguments for /inprogress")),
-            );
-          }
-          return JobInProgressScreen(
-            bookingId: args['bookingId'],
-            provider: args['provider'],
-            serviceCategory: args['serviceCategory'],
-            price: (args['price'] ?? 0.0) as double,
-            location: args['location'] ?? {},
-            startedAt: args['startedAt']?.toString() ?? '',
-            eta: args['eta']?.toString() ?? '',
-          );
+          return args == null
+              ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /inprogress")))
+              : InternetGate(
+                  child: JobInProgressScreen(
+                    bookingId: args['bookingId'],
+                    provider: args['provider'],
+                    serviceCategory: args['serviceCategory'],
+                    price: (args['price'] ?? 0.0) as double,
+                    location: args['location'] ?? {},
+                    startedAt: args['startedAt']?.toString() ?? '',
+                    eta: args['eta']?.toString() ?? '',
+                  ),
+                );
         },
 
-        // ✅ PROVIDER IN PROGRESS
         '/providerInProgress': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          if (args == null || args['bookingId'] == null) {
-            return const Scaffold(
-              body: Center(child: Text("❌ Missing or invalid arguments for /providerInProgress")),
-            );
-          }
-          return ProviderInProgressScreen(
-            bookingId: args['bookingId'],
-          );
+          return args == null || args['bookingId'] == null
+              ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /providerInProgress")))
+              : InternetGate(
+                  child: ProviderInProgressScreen(bookingId: args['bookingId']),
+                );
         },
 
-        // ✅ CUSTOMER RATING PROVIDER
         '/rate': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          if (args == null) {
-            return const Scaffold(
-              body: Center(child: Text("❌ Missing or invalid arguments for /rate")),
-            );
-          }
-          return RatingScreen(
-            bookingId: args['bookingId'],
-            provider: args['provider'],
-            serviceCategory: args['serviceCategory'],
-            price: (args['price'] ?? 0.0) as double,
-          );
+          return args == null
+              ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /rate")))
+              : InternetGate(
+                  child: RatingScreen(
+                    bookingId: args['bookingId'],
+                    provider: args['provider'],
+                    serviceCategory: args['serviceCategory'],
+                    price: (args['price'] ?? 0.0) as double,
+                  ),
+                );
         },
 
-        // ✅ PROVIDER RATING CUSTOMER
         '/rate_customer': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
-          if (args == null) {
-            return const Scaffold(
-              body: Center(child: Text("❌ Missing or invalid arguments for /rate_customer")),
-            );
-          }
-          return RateCustomerScreen(
-            bookingId: args['bookingId'],
-            customer: args['customer'],
-            serviceCategory: args['serviceCategory'],
-            price: (args['price'] ?? 0.0) as double,
-          );
+          return args == null
+              ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /rate_customer")))
+              : InternetGate(
+                  child: RateCustomerScreen(
+                    bookingId: args['bookingId'],
+                    customer: args['customer'],
+                    serviceCategory: args['serviceCategory'],
+                    price: (args['price'] ?? 0.0) as double,
+                  ),
+                );
         },
       },
+    );
+  }
+}
+
+class InternetGate extends StatefulWidget {
+  final Widget child;
+  const InternetGate({super.key, required this.child});
+
+  @override
+  State<InternetGate> createState() => _InternetGateState();
+}
+
+class _InternetGateState extends State<InternetGate> {
+  bool _connected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkConnection();
+    Connectivity().onConnectivityChanged.listen((result) {
+      setState(() {
+        _connected = result != ConnectivityResult.none;
+      });
+    });
+  }
+
+  Future<void> _checkConnection() async {
+    final result = await Connectivity().checkConnectivity();
+    setState(() {
+      _connected = result != ConnectivityResult.none;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _connected ? widget.child : const NoInternetScreen();
+  }
+}
+
+class NoInternetScreen extends StatelessWidget {
+  const NoInternetScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.wifi_off, size: 70, color: Colors.grey),
+            SizedBox(height: 20),
+            Text(
+              "No Internet Connection",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "Please check your network and try again.",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
