@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
@@ -35,25 +36,27 @@ class SuyoApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFF4B2EFF),
         fontFamily: 'Roboto',
       ),
-      home: InternetGate(child: LoginScreen()),
+      home: InternetGate(child: PermissionGate(child: LoginScreen())),
 
       routes: {
-        '/home': (context) => InternetGate(child: HomeScreen()),
-        '/register': (context) => InternetGate(child: RegisterScreen()),
-        '/providerHome': (context) => InternetGate(child: ProviderHomeScreen()),
+        '/home': (context) => InternetGate(child: PermissionGate(child: HomeScreen())),
+        '/register': (context) => InternetGate(child: PermissionGate(child: RegisterScreen())),
+        '/providerHome': (context) => InternetGate(child: PermissionGate(child: ProviderHomeScreen())),
 
         '/pending': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           return args == null
               ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /pending")))
               : InternetGate(
-                  child: CustomerPendingScreen(
-                    provider: args['provider'],
-                    serviceCategory: args['serviceCategory'],
-                    price: (args['price'] ?? 0.0) as double,
-                    location: args['location'] ?? {},
-                    bookingId: args['bookingId'],
-                    customerId: args['customerId'],
+                  child: PermissionGate(
+                    child: CustomerPendingScreen(
+                      provider: args['provider'],
+                      serviceCategory: args['serviceCategory'],
+                      price: (args['price'] ?? 0.0) as double,
+                      location: args['location'] ?? {},
+                      bookingId: args['bookingId'],
+                      customerId: args['customerId'],
+                    ),
                   ),
                 );
         },
@@ -63,14 +66,16 @@ class SuyoApp extends StatelessWidget {
           return args == null
               ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /inprogress")))
               : InternetGate(
-                  child: JobInProgressScreen(
-                    bookingId: args['bookingId'],
-                    provider: args['provider'],
-                    serviceCategory: args['serviceCategory'],
-                    price: (args['price'] ?? 0.0) as double,
-                    location: args['location'] ?? {},
-                    startedAt: args['startedAt']?.toString() ?? '',
-                    eta: args['eta']?.toString() ?? '',
+                  child: PermissionGate(
+                    child: JobInProgressScreen(
+                      bookingId: args['bookingId'],
+                      provider: args['provider'],
+                      serviceCategory: args['serviceCategory'],
+                      price: (args['price'] ?? 0.0) as double,
+                      location: args['location'] ?? {},
+                      startedAt: args['startedAt']?.toString() ?? '',
+                      eta: args['eta']?.toString() ?? '',
+                    ),
                   ),
                 );
         },
@@ -80,7 +85,9 @@ class SuyoApp extends StatelessWidget {
           return args == null || args['bookingId'] == null
               ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /providerInProgress")))
               : InternetGate(
-                  child: ProviderInProgressScreen(bookingId: args['bookingId']),
+                  child: PermissionGate(
+                    child: ProviderInProgressScreen(bookingId: args['bookingId']),
+                  ),
                 );
         },
 
@@ -89,11 +96,13 @@ class SuyoApp extends StatelessWidget {
           return args == null
               ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /rate")))
               : InternetGate(
-                  child: RatingScreen(
-                    bookingId: args['bookingId'],
-                    provider: args['provider'],
-                    serviceCategory: args['serviceCategory'],
-                    price: (args['price'] ?? 0.0) as double,
+                  child: PermissionGate(
+                    child: RatingScreen(
+                      bookingId: args['bookingId'],
+                      provider: args['provider'],
+                      serviceCategory: args['serviceCategory'],
+                      price: (args['price'] ?? 0.0) as double,
+                    ),
                   ),
                 );
         },
@@ -103,11 +112,13 @@ class SuyoApp extends StatelessWidget {
           return args == null
               ? const Scaffold(body: Center(child: Text("❌ Missing or invalid arguments for /rate_customer")))
               : InternetGate(
-                  child: RateCustomerScreen(
-                    bookingId: args['bookingId'],
-                    customer: args['customer'],
-                    serviceCategory: args['serviceCategory'],
-                    price: (args['price'] ?? 0.0) as double,
+                  child: PermissionGate(
+                    child: RateCustomerScreen(
+                      bookingId: args['bookingId'],
+                      customer: args['customer'],
+                      serviceCategory: args['serviceCategory'],
+                      price: (args['price'] ?? 0.0) as double,
+                    ),
                   ),
                 );
         },
@@ -177,5 +188,66 @@ class NoInternetScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class PermissionGate extends StatefulWidget {
+  final Widget child;
+  const PermissionGate({super.key, required this.child});
+
+  @override
+  State<PermissionGate> createState() => _PermissionGateState();
+}
+
+class _PermissionGateState extends State<PermissionGate> {
+  bool _granted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissions();
+  }
+
+  Future<void> _checkPermissions() async {
+    var status = await Permission.location.status;
+    if (!status.isGranted) {
+      status = await Permission.location.request();
+    }
+
+    setState(() {
+      _granted = status.isGranted;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _granted
+        ? widget.child
+        : Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.location_off, size: 70, color: Colors.grey),
+                  const SizedBox(height: 20),
+                  const Text(
+                    "Location Permission Denied",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Please enable location access to continue.",
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _checkPermissions,
+                    child: const Text("Try Again"),
+                  ),
+                ],
+              ),
+            ),
+          );
   }
 }
