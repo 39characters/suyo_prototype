@@ -92,8 +92,9 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
       if (location == null || location['lat'] == null || location['lng'] == null) return null;
 
-      final lat = location['lat'].toDouble();
-      final lng = location['lng'].toDouble();
+      final lat = (location['lat'] as num).toDouble();
+      final lng = (location['lng'] as num).toDouble();
+
       final rating = data['rating'] != null
           ? ((data['rating'] as num).toDouble()).toStringAsFixed(1)
           : "0.0";

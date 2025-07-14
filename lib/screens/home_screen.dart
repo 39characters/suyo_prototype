@@ -380,8 +380,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 _infoRow("Service", data['serviceCategory']),
                 _infoRow(
                   "Provider",
-                  data['provider'] is Map
-                      ? (data['provider']['name'] ?? 'Unknown Provider')
+                  data['provider'] is Map && data['provider']?['name'] != null
+                      ? data['provider']['name']
                       : (data['providerName'] ?? 'Unknown Provider'),
                 ),
                 _infoRow("Price", "₱${data['price']}"),

@@ -354,9 +354,9 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
               left: 0,
               right: 0,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                padding: const EdgeInsets.symmetric(vertical: 0),
                 child: Container(
-                  height: screenHeight * 0.19,
+                  height: screenHeight * 0.24,
                   padding: const EdgeInsets.all(24),
                   decoration: const BoxDecoration(
                     color: Colors.white,
@@ -373,7 +373,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                           children: [
                             const TextSpan(text: 'You are booking for '),
                             TextSpan(
-                              text: widget.serviceCategory,
+                              text: 'Pet Sitting',
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
