@@ -124,15 +124,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false, // 🔥 removes back button
+        automaticallyImplyLeading: false,
         iconTheme: const IconThemeData(color: Colors.white),
         backgroundColor: const Color(0xFF4B2EFF),
         elevation: 0,
         toolbarHeight: 56,
-        actions: [
-          IconButton(icon: const Icon(Icons.notifications_none), onPressed: () {}, color: Colors.white),
-          IconButton(icon: const Icon(Icons.share), onPressed: () {}, color: Colors.white),
-        ],
       ),
       backgroundColor: const Color(0xFF4B2EFF),
       body: FadeTransition(

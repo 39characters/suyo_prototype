@@ -254,7 +254,7 @@ class _JobInProgressScreenState extends State<JobInProgressScreen>
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(10)),
                           ),
-                          child: const Text("Contact Provider",
+                          child: const Text("Contact",
                               style: TextStyle(color: Color(0xFF4B2EFF))),
                         ),
                       ),

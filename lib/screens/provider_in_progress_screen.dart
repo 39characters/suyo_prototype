@@ -260,7 +260,7 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
-                            child: const Text("Contact Customer"),
+                            child: const Text("Contact"),
                           ),
                         ),
                         const SizedBox(width: 12),
