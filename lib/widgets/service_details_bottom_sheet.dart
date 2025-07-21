@@ -14,17 +14,17 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
     final double? price = service['price'] != null ? (service['price'] as num).toDouble() : null;
 
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '$label',
+            label,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontSize: 22,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
@@ -33,7 +33,7 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
                 ? 'Starts at ₱${price.toStringAsFixed(2)}'
                 : 'Price not available',
             style: const TextStyle(
-              color: Colors.white70,
+              color: Colors.black,
               fontSize: 16,
             ),
           ),
@@ -41,7 +41,7 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
           Text(
             description,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black87,
               fontSize: 14,
             ),
           ),
@@ -50,11 +50,12 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFF56D16),
+                backgroundColor: const Color(0xFF4B2EFF),
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                elevation: 2,
               ),
               onPressed: () {
                 final category = service['firestoreCategory'];
@@ -81,11 +82,14 @@ class ServiceDetailsBottomSheet extends StatelessWidget {
                     ),
                   );
                 }
-
               },
               child: const Text(
                 'Proceed',
-                style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),

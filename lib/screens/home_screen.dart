@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../widgets/service_card.dart';
 import '../widgets/service_details_bottom_sheet.dart';
 import 'customer_pending_screen.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -76,6 +79,71 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _deleteUserData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black.withOpacity(0.6),
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            "Confirm Data Deletion",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          content: const Text(
+            "Are you sure you want to delete your account and all associated data? This action cannot be undone.",
+            style: TextStyle(fontSize: 16),
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF4B2EFF),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 2,
+              ),
+              child: const Text(
+                "Cancel",
+                style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+                await FirebaseAuth.instance.currentUser?.delete();
+                if (mounted) Navigator.pushReplacementNamed(context, '/');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF4B2EFF),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 2,
+              ),
+              child: const Text(
+                "Delete",
+                style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+              ),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      print("❌ Error deleting data: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Error deleting data. Please try again.")),
+        );
+      }
+    }
+  }
+
   final List<Map<String, dynamic>> services = [
     {
       "label": "Laundry Service",
@@ -125,12 +193,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        iconTheme: const IconThemeData(color: Colors.white),
-        backgroundColor: const Color(0xFF4B2EFF),
-        elevation: 0,
-        toolbarHeight: 56,
+        backgroundColor: Colors.white,
+        elevation: 1,
+        title: Text(
+          _selectedTab == 0
+              ? "Book a Service!"
+              : _selectedTab == 1
+                  ? "Your Receipts"
+                  : "Your Profile",
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
       ),
-      backgroundColor: const Color(0xFF4B2EFF),
+      backgroundColor: Colors.grey[200], // Dimmer, industry-standard gray
       body: FadeTransition(
         opacity: _fadeAnimation,
         child: _pages[_selectedTab],
@@ -142,20 +221,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         currentIndex: _selectedTab,
         onTap: _onTabTapped,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+        unselectedLabelStyle: const TextStyle(fontSize: 14),
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Receipts'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined, size: 28),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.receipt_long, size: 28),
+            label: 'Receipts',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline, size: 28),
+            label: 'Profile',
+          ),
         ],
       ),
     );
   }
 
   Widget _buildHomeContent() {
-    return Container(
-      color: const Color(0xFF4B2EFF),
+    return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -180,96 +267,95 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               },
               child: Container(
                 width: double.infinity,
-                color: const Color(0xFFf56d16),
-                padding: const EdgeInsets.all(12),
+                color: const Color(0xFFF56D16),
+                padding: const EdgeInsets.all(16),
                 child: const Text(
                   "⏳ You have a pending request — tap to view",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
             ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: Center(
-              child: Text(
-                'Book a service!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'Arial',
-                ),
+            child: Text(
+              'Book a Service!',
+              style: TextStyle(
+                color: Colors.black87,
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          const SizedBox(height: 32),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: GridView.builder(
-                itemCount: services.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemBuilder: (context, index) {
-                  final service = services[index];
-                  final isSelected = index == selectedService;
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: services.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemBuilder: (context, index) {
+                final service = services[index];
+                final isSelected = index == selectedService;
 
-                  return GestureDetector(
-                    onTap: service['disabled'] == true || _hasOngoingBooking
-                        ? null
-                        : () {
-                            setState(() {
-                              if (selectedService == index) {
-                                selectedService = -1;
-                              } else {
-                                selectedService = index;
-                                showModalBottomSheet(
-                                  context: context,
-                                  shape: const RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                  ),
-                                  backgroundColor: const Color(0xFF4B2EFF),
-                                  builder: (_) => ServiceDetailsBottomSheet(service: service),
-                                ).whenComplete(() {
-                                  // 🧼 Clear selection when popup is closed
-                                  setState(() {
-                                    selectedService = -1;
-                                  });
+                return GestureDetector(
+                  onTap: service['disabled'] == true || _hasOngoingBooking
+                      ? null
+                      : () {
+                          setState(() {
+                            if (selectedService == index) {
+                              selectedService = -1;
+                            } else {
+                              selectedService = index;
+                              showModalBottomSheet(
+                                context: context,
+                                shape: const RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                                ),
+                                backgroundColor: Colors.white,
+                                builder: (_) => ServiceDetailsBottomSheet(service: service),
+                              ).whenComplete(() {
+                                setState(() {
+                                  selectedService = -1;
                                 });
-                              }
-                            });
-                          },
-                    child: Opacity(
-                      opacity: service['disabled'] == true || _hasOngoingBooking ? 0.4 : 1,
-                      child: ServiceCard(
-                        label: service['label'],
-                        icon: service['icon'],
-                        isSelected: isSelected,
-                        iconSize: 100,
-                        textStyle: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? const Color(0xFF4B2EFF) : Colors.white,
-                        ),
-                        backgroundColor: isSelected ? Colors.white : const Color(0xFF3A22CC),
+                              });
+                            }
+                          });
+                        },
+                  child: Opacity(
+                    opacity: service['disabled'] == true || _hasOngoingBooking ? 0.4 : 1,
+                    child: ServiceCard(
+                      label: service['label'],
+                      icon: service['icon'],
+                      isSelected: isSelected,
+                      iconSize: 80,
+                      textStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF4B2EFF),
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );
   }
-
 
   Widget _buildReceipts() {
     final user = FirebaseAuth.instance.currentUser;
@@ -282,28 +368,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           .get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(
             child: Text(
               "No completed bookings yet.",
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.black87, fontSize: 18),
             ),
           );
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           itemCount: snapshot.data!.docs.length,
           itemBuilder: (context, index) {
             final data = snapshot.data!.docs[index].data() as Map<String, dynamic>;
 
             final service = data['serviceCategory'] ?? 'Unknown Service';
             final price = data['price'] ?? 0;
-
-            // 🛡️ Safely handle both new and old provider formats
             String provider = "Unknown Provider";
             if (data.containsKey('provider') && data['provider'] is Map) {
               provider = data['provider']['name'] ?? "Unknown Provider";
@@ -313,14 +397,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
             final completedAt = data['completedAt']?.toDate();
             final formattedDate = completedAt != null
-                ? "${completedAt.month}/${completedAt.day}/${completedAt.year}"
+                ? DateFormat('MM/dd/yyyy').format(completedAt)
                 : "Date unknown";
 
-            return Column(
-              children: [
-                _buildReceiptTile("$service - ₱$price", "$provider • $formattedDate", data),
-                const SizedBox(height: 12),
-              ],
+            return Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: const Icon(Icons.receipt_long, color: Color(0xFF4B2EFF), size: 30),
+                title: Text(
+                  "$service - ₱$price",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  "$provider • $formattedDate",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF4B2EFF)),
+                onTap: () => _showReceiptDetailsPopup(data),
+              ),
             );
           },
         );
@@ -328,80 +423,57 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildReceiptTile(String title, String subtitle, Map<String, dynamic> bookingData) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF3A22CC),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: ListTile(
-        leading: const Icon(Icons.receipt_long, color: Colors.white),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
-        onTap: () => _showReceiptDetailsPopup(bookingData),
-      ),
-    );
-  }
-
   void _showReceiptDetailsPopup(Map<String, dynamic> data) {
     final completedAt = data['completedAt']?.toDate();
     final dateStr = completedAt != null
-        ? "${completedAt.month}/${completedAt.day}/${completedAt.year} ${completedAt.hour}:${completedAt.minute.toString().padLeft(2, '0')}"
+        ? DateFormat('MM/dd/yyyy HH:mm').format(completedAt)
         : "Unknown";
 
     showDialog(
       context: context,
-      builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Center(
-                  child: Text(
-                    "Booking Summary",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _infoRow("Service", data['serviceCategory']),
-                _infoRow(
-                  "Provider",
-                  data['provider'] is Map && data['provider']?['name'] != null
-                      ? data['provider']['name']
-                      : (data['providerName'] ?? 'Unknown Provider'),
-                ),
-                _infoRow("Price", "₱${data['price']}"),
-                _infoRow("Completed At", dateStr),
-                _infoRow("Rating", "${data['customerRating'] ?? 'N/A'} / 5"),
-                _infoRow("Feedback", data['customerFeedback']?.isNotEmpty == true ? data['customerFeedback'] : "No feedback"),
-                _infoRow("Location", "${data['location']['lat']}, ${data['location']['lng']}"),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4B2EFF),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                    child: const Text("Close", style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-              ],
-            ),
+      barrierColor: Colors.black.withOpacity(0.6),
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "Booking Summary",
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _infoRow("Service", data['serviceCategory'] ?? 'N/A'),
+              _infoRow(
+                "Provider",
+                data['provider'] is Map && data['provider']?['name'] != null
+                    ? data['provider']['name']
+                    : (data['providerName'] ?? 'Unknown Provider'),
+              ),
+              _infoRow("Price", "₱${data['price'] ?? 0}"),
+              _infoRow("Completed At", dateStr),
+              _infoRow("Rating", "${data['customerRating'] ?? 'N/A'} / 5"),
+              _infoRow("Feedback", data['customerFeedback']?.isNotEmpty == true ? data['customerFeedback'] : "No feedback"),
+              _infoRow("Location", "${data['location']['lat'] ?? 'N/A'}, ${data['location']['lng'] ?? 'N/A'}"),
+            ],
           ),
         ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF4B2EFF),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 2,
+            ),
+            child: const Text(
+              "Close",
+              style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -409,43 +481,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _infoRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 15,
-            ),
-          ),
-          const Divider(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatTile(String title, String subtitle) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF3A22CC),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.person)),
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        subtitle: Text(subtitle, style: const TextStyle(color: Colors.white70)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
-        onTap: () {},
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(fontSize: 16, color: Colors.black87),
+          children: [
+            TextSpan(text: "$label: ", style: const TextStyle(fontWeight: FontWeight.w600)),
+            TextSpan(text: value),
+          ],
+        ),
       ),
     );
   }
@@ -457,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       future: FirebaseFirestore.instance.collection('users').doc(user?.uid).get(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: Colors.white));
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
         }
 
         if (!snapshot.hasData || !snapshot.data!.exists) {
@@ -465,125 +508,159 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             showDialog(
               context: context,
               barrierDismissible: false,
+              barrierColor: Colors.black.withOpacity(0.6),
               builder: (_) => AlertDialog(
-                title: const Text("Session Expired"),
-                content: const Text("Your user session has expired. Please log in again."),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                title: const Text(
+                  "Session Expired",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                ),
+                content: const Text(
+                  "Your user session has expired. Please log in again.",
+                  style: TextStyle(fontSize: 16),
+                ),
                 actions: [
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
-                      Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+                      if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                     },
-                    child: const Text("OK"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF4B2EFF),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: const Text(
+                      "OK",
+                      style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+                    ),
                   ),
                 ],
               ),
             );
           });
 
-          return const Center(child: Text("User data not found", style: TextStyle(color: Colors.white)));
+          return const Center(
+            child: Text(
+              "User data not found",
+              style: TextStyle(color: Colors.black87, fontSize: 18),
+            ),
+          );
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
         final displayName = "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+        final email = data['email'] ?? user?.email ?? 'No email';
         final rating = (data['rating'] ?? 0).toDouble();
         final ratingCount = data['ratingCount'] ?? 0;
 
-        return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(32),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3420B3),
-                    borderRadius: BorderRadius.circular(32),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      )
-                    ],
-                  ),
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF4B2EFF),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.person, size: 60, color: Colors.white),
-                      ),
-                      const SizedBox(height: 16),
+                      const Icon(Icons.person, size: 60, color: Color(0xFF4B2EFF)),
+                      const SizedBox(height: 12),
                       Text(
                         displayName,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 8),
-                      const Text(
+                      Text(
                         "Customer",
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white70,
-                          fontStyle: FontStyle.italic,
-                        ),
+                        style: const TextStyle(fontSize: 16, fontStyle: FontStyle.italic),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 8),
+                      Text(
+                        email,
+                        style: const TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 12),
                       _buildRatingStars(rating),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 8),
                       Text(
                         "${rating.toStringAsFixed(1)} / 5 from $ratingCount ratings",
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await FirebaseAuth.instance.signOut();
-                    Navigator.pushReplacementNamed(context, '/');
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text("Sign Out", style: TextStyle(color: Colors.white)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF56D16),
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  ),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  if (mounted) Navigator.pushReplacementNamed(context, '/');
+                },
+                icon: const Icon(Icons.logout, size: 20, color: Color(0xFF4B2EFF)),
+                label: const Text(
+                  "Sign Out",
+                  style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
                 ),
-              ],
-            ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(200, 50),
+                  elevation: 2,
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _deleteUserData,
+                icon: const Icon(Icons.delete_forever, size: 20, color: Color(0xFF4B2EFF)),
+                label: const Text(
+                  "Delete Account",
+                  style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+                ),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: Color(0xFF4B2EFF)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  minimumSize: const Size(200, 50),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
           ),
         );
       },
     );
   }
 
-
   Widget _buildRatingStars(double rating) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(5, (index) {
-        return Icon(
-          index < rating.round()
-              ? Icons.star
-              : index < rating ? Icons.star_half : Icons.star_border,
-          color: Colors.amber,
-          size: 28,
+        return Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(
+              Icons.star_border,
+              color: Colors.black,
+              size: 30,
+            ),
+            Icon(
+              index < rating.round()
+                  ? Icons.star
+                  : index < rating ? Icons.star_half : Icons.star_border,
+              color: Colors.amber,
+              size: 28,
+            ),
+          ],
         );
       }),
     );
   }
-
 }
