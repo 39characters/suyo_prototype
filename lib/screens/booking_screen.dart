@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_pending_screen.dart';
+import 'package:suyo_prototype/widgets/location_preset_picker.dart';
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -17,6 +18,7 @@ class BookingScreen extends StatefulWidget {
   const BookingScreen({
     required this.serviceCategory,
     required this.price,
+    super.key,
   });
 
   @override
@@ -57,7 +59,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     _centerLocation = _userLocation;
     await _loadMapStyle();
     await _fetchProviders();
-    await _askUserDetails();
+    await _askPresetLocation();
   }
 
   Future<void> _loadMapStyle() async {
@@ -174,85 +176,37 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
     _debounce = Timer(const Duration(milliseconds: 500), _filterProvidersByCenter);
   }
 
-  Future<void> _askUserDetails() async {
+  Future<void> _askPresetLocation() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.white,
-        elevation: 20,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('Enter Your Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4B2EFF))),
-                const SizedBox(height: 20),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Full Name'),
-                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                  onSaved: (v) => customerName = v!.trim(),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Phone Number'),
-                  keyboardType: TextInputType.phone,
-                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                  onSaved: (v) => phone = v!.trim(),
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  decoration: const InputDecoration(labelText: 'Complete Address'),
-                  validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                  onSaved: (v) => address = v!.trim(),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          _formKey.currentState!.save();
-                          Navigator.pop(context, true);
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4B2EFF),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Submit', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                )
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
-    if (result != true) {
+    final preset = await showPresetPickerModal(context);
+    if (preset != null) {
+      setState(() {
+        customerName = preset['name'] ?? '';
+        phone = preset['contactNumber'] ?? '';
+        address = preset['address'] ?? '';
+        _centerLocation = LatLng(preset['lat'] as double, preset['lng'] as double);
+        _mapLocked = true; // Lock map to preset location
+      });
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(_centerLocation!),
+      );
+      _filterProvidersByCenter();
+    } else {
       final confirm = await showDialog<bool>(
         context: context,
+        barrierDismissible: false,
         builder: (_) => AlertDialog(
-          title: const Text("Go back?"),
-          content: const Text("You need to provide your details to continue."),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("No Location Selected"),
+          content: const Text("You need to select a location preset to continue booking."),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Stay")),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Try Again", style: TextStyle(color: Color(0xFF4B2EFF))),
+            ),
             TextButton(
               onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-              child: const Text("Go Home"),
+              child: const Text("Go Home", style: TextStyle(color: Colors.red)),
             ),
           ],
         ),
@@ -260,7 +214,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
 
       if (confirm != true) {
         await Future.delayed(const Duration(milliseconds: 300));
-        _askUserDetails();
+        _askPresetLocation();
       }
     }
   }
@@ -326,6 +280,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
   void dispose() {
     _debounce?.cancel();
     _sheetController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -337,11 +292,11 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
         content: const Text("Are you sure you want to go back? Your selected location will be lost."),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text("Stay"),
           ),
           TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text("Go Back"),
           ),
         ],
@@ -394,8 +349,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             Factory(() => HorizontalDragGestureRecognizer()),
                           },
                   ),
-
-                  // AppBar
                   Positioned(
                     top: 0,
                     left: 0,
@@ -425,8 +378,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                       centerTitle: true,
                     ),
                   ),
-
-                  // Slightly lower pointer
                   Positioned(
                     top: MediaQuery.of(context).size.height * 0.34,
                     left: MediaQuery.of(context).size.width / 2 - 25,
@@ -434,8 +385,6 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                       child: Icon(Icons.location_on, size: 50, color: Color(0xFFF56D16)),
                     ),
                   ),
-
-                  // Lock button moved down
                   Positioned(
                     top: 100,
                     right: 20,
@@ -450,138 +399,137 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                       ),
                     ),
                   ),
-                // Provider sheet (unchanged)
-                DraggableScrollableSheet(
-                  controller: _sheetController,
-                  initialChildSize: _sheetSize,
-                  minChildSize: 0.2,
-                  maxChildSize: 0.85,
-                  builder: (context, scrollController) {
-                    return Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
-                      ),
-                      padding: const EdgeInsets.all(16),
-                      child: Stack(
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 40),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: const Color(0xFF4B2EFF).withOpacity(0.1),
-                                    ),
-                                    child: DropdownButtonHideUnderline(
-                                      child: DropdownButton<String>(
-                                        value: _sortType,
-                                        dropdownColor: Colors.white,
-                                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                                        items: ['Nearest', 'Rating', 'Smart'].map((value) {
-                                          return DropdownMenuItem(value: value, child: Text(value));
-                                        }).toList(),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _sortType = value!;
-                                            _filterProvidersByCenter();
-                                          });
-                                        },
+                  DraggableScrollableSheet(
+                    controller: _sheetController,
+                    initialChildSize: _sheetSize,
+                    minChildSize: 0.2,
+                    maxChildSize: 0.85,
+                    builder: (context, scrollController) {
+                      return Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Stack(
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 40),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text("Nearby Providers", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(20),
+                                        color: const Color(0xFF4B2EFF).withOpacity(0.1),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: _sortType,
+                                          dropdownColor: Colors.white,
+                                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                          items: ['Nearest', 'Rating', 'Smart'].map((value) {
+                                            return DropdownMenuItem(value: value, child: Text(value));
+                                          }).toList(),
+                                          onChanged: (value) {
+                                            setState(() {
+                                              _sortType = value!;
+                                              _filterProvidersByCenter();
+                                            });
+                                          },
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 8),
-                              Expanded(
-                                child: _isBuffering
-                                    ? const Center(child: CircularProgressIndicator())
-                                    : ListView.separated(
-                                        controller: scrollController,
-                                        itemCount: filteredProviders.length,
-                                        separatorBuilder: (_, __) => const Divider(height: 16),
-                                        itemBuilder: (context, index) {
-                                          final p = filteredProviders[index];
-                                          final isSelected = _selectedProvider == p;
-                                          return InkWell(
-                                            onTap: () => setState(() => _selectedProvider = p),
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
-                                                      Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
-                                                    ],
-                                                  ),
-                                                  Row(
-                                                    children: [
-                                                      const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
-                                                      const SizedBox(width: 4),
-                                                      Text("${p['rating']}"),
-                                                    ],
-                                                  )
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                              ),
-                              const SizedBox(height: 12),
-                              ElevatedButton(
-                                onPressed: _selectedProvider == null ? null : _handleBooking,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
-                                  minimumSize: const Size.fromHeight(45),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ],
                                 ),
-                                child: const Text("Request Service", style: TextStyle(color: Colors.white)),
-                              ),
-                            ],
-                          ),
-                          Positioned(
-                            top: 0,
-                            left: MediaQuery.of(context).size.width / 2 - 40,
-                            child: GestureDetector(
-                              onTap: _toggleSheet,
-                              behavior: HitTestBehavior.translucent,
-                              child: Container(
-                                width: 80,
-                                height: 40,
-                                alignment: Alignment.center,
+                                const SizedBox(height: 8),
+                                Expanded(
+                                  child: _isBuffering
+                                      ? const Center(child: CircularProgressIndicator())
+                                      : ListView.separated(
+                                          controller: scrollController,
+                                          itemCount: filteredProviders.length,
+                                          separatorBuilder: (_, __) => const Divider(height: 16),
+                                          itemBuilder: (context, index) {
+                                            final p = filteredProviders[index];
+                                            final isSelected = _selectedProvider == p;
+                                            return InkWell(
+                                              onTap: () => setState(() => _selectedProvider = p),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                decoration: BoxDecoration(
+                                                  color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
+                                                        Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
+                                                      ],
+                                                    ),
+                                                    Row(
+                                                      children: [
+                                                        const Icon(Icons.star, size: 16, color: Color(0xFFF56D16)),
+                                                        const SizedBox(width: 4),
+                                                        Text("${p['rating']}"),
+                                                      ],
+                                                    )
+                                                  ],
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                ),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _selectedProvider == null ? null : _handleBooking,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: _selectedProvider == null ? Colors.grey : const Color(0xFF4B2EFF),
+                                    minimumSize: const Size.fromHeight(45),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text("Request Service", style: TextStyle(color: Colors.white)),
+                                ),
+                              ],
+                            ),
+                            Positioned(
+                              top: 0,
+                              left: MediaQuery.of(context).size.width / 2 - 40,
+                              child: GestureDetector(
+                                onTap: _toggleSheet,
+                                behavior: HitTestBehavior.translucent,
                                 child: Container(
-                                  width: 40,
-                                  height: 4,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xDE4B2EFF),
-                                    borderRadius: BorderRadius.circular(10),
+                                  width: 80,
+                                  height: 40,
+                                  alignment: Alignment.center,
+                                  child: Container(
+                                    width: 40,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xDE4B2EFF),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
       ),
     );
   }

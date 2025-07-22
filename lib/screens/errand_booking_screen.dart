@@ -9,6 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_pending_screen.dart';
 import 'home_screen.dart';
+import 'package:suyo_prototype/widgets/location_preset_picker.dart';
 
 class ErrandBookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -17,6 +18,7 @@ class ErrandBookingScreen extends StatefulWidget {
   const ErrandBookingScreen({
     required this.serviceCategory,
     required this.price,
+    super.key, // Added super.key for consistency
   });
 
   @override
@@ -57,103 +59,57 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
       _userLocation = LatLng(pos.latitude, pos.longitude);
       _centerLocation = _userLocation;
     });
-    _loadMapStyle();
-    _askUserDetails();
-  }
-
-  Future<void> _askUserDetails() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => Dialog(
-        backgroundColor: Colors.white,
-        elevation: 20,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Enter Your Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4B2EFF))),
-              const SizedBox(height: 20),
-              Form(
-                key: _formKey,
-                child: Column(
-                  children: [
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Full Name'),
-                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                      onSaved: (v) => customerName = v!.trim(),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Phone Number'),
-                      keyboardType: TextInputType.phone,
-                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                      onSaved: (v) => phone = v!.trim(),
-                    ),
-                    const SizedBox(height: 12),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Complete Address'),
-                      validator: (v) => v!.trim().isEmpty ? 'Required' : null,
-                      onSaved: (v) => address = v!.trim(),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState?.validate() ?? false) {
-                        _formKey.currentState!.save();
-                        Navigator.pop(context, true);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4B2EFF),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Submit', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (result != true) {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text("Go back?"),
-          content: const Text("You need to provide your details to continue."),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Stay")),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Go Home")),
-          ],
-        ),
-      );
-      if (confirm == true) {
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
-      } else {
-        await Future.delayed(const Duration(milliseconds: 300));
-        _askUserDetails();
-      }
-    }
+    await _loadMapStyle();
+    await _askPresetLocation(); // Replaced _askUserDetails with _askPresetLocation
   }
 
   Future<void> _loadMapStyle() async {
     final style = await rootBundle.loadString('assets/map_style.json');
     _mapController?.setMapStyle(style);
+  }
+
+  Future<void> _askPresetLocation() async {
+    await Future.delayed(const Duration(milliseconds: 600));
+    final preset = await showPresetPickerModal(context);
+    if (preset != null) {
+      setState(() {
+        customerName = preset['name'] ?? '';
+        phone = preset['contactNumber'] ?? '';
+        address = preset['address'] ?? '';
+        _centerLocation = LatLng(preset['lat'] as double, preset['lng'] as double);
+        _mapLocked = true; // Lock map to preset location
+      });
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLng(_centerLocation!),
+      );
+    } else {
+      final confirm = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text("No Location Selected"),
+          content: const Text("You need to select a location preset to continue booking."),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Try Again", style: TextStyle(color: Color(0xFF4B2EFF))),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Go Home", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        _askPresetLocation();
+      } else {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomeScreen()));
+      }
+    }
   }
 
   void _onCameraMove(CameraPosition pos) {
@@ -239,7 +195,6 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
       }
     });
   }
-
 
   Future<void> _cancelBooking() async {
     final confirm = await showDialog<bool>(
@@ -339,7 +294,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                 leading: isWaiting
                     ? null
                     : IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Color(0xFF4B2EFF)),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white), // Fixed icon color to white for consistency
                         onPressed: _goBackHome,
                       ),
                 title: const Text(
@@ -373,7 +328,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
                           children: [
                             const TextSpan(text: 'You are booking for '),
                             TextSpan(
-                              text: 'Pet Sitting',
+                              text: widget.serviceCategory, // Use dynamic serviceCategory instead of hardcoded 'Pet Sitting'
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],

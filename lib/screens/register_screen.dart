@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class RegisterScreen extends StatefulWidget {
   @override
@@ -78,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 Align(
                   alignment: Alignment.center,
-                  child: Icon(Icons.location_on, size: 48, color: Color(0xFFF56D16)),
+                  child: Icon(Icons.location_on, size: 48, color: Colors.white),
                 ),
               ],
             ),
@@ -214,20 +213,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       width: MediaQuery.of(context).size.width * 0.75,
       child: TextField(
         controller: controller,
-        style: TextStyle(color: Colors.white, fontSize: 16),
         decoration: InputDecoration(
-          prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-            child: Icon(icon, color: Color(0xFFF56D16)),
-          ),
+          prefixIcon: Icon(icon, color: Colors.grey),
           hintText: hint,
-          hintStyle: TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Color(0xFF3A22CC),
+          hintStyle: TextStyle(color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
           ),
+          filled: true,
+          fillColor: Colors.grey[200],
         ),
       ),
     );
@@ -245,27 +240,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: TextField(
         controller: controller,
         obscureText: isObscured,
-        style: TextStyle(color: Colors.white, fontSize: 16),
         decoration: InputDecoration(
-          prefixIcon: Padding(
-            padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-            child: Icon(icon, color: Color(0xFFF56D16)),
-          ),
+          prefixIcon: Icon(icon, color: Colors.grey),
           suffixIcon: IconButton(
             icon: Icon(
               isObscured ? Icons.visibility_off : Icons.visibility,
-              color: Color(0xFFC7C7C7).withOpacity(0.65),
+              color: Colors.grey[600],
             ),
             onPressed: toggleVisibility,
           ),
           hintText: hint,
-          hintStyle: TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Color(0xFF3A22CC),
+          hintStyle: TextStyle(color: Colors.grey),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(30),
             borderSide: BorderSide.none,
           ),
+          filled: true,
+          fillColor: Colors.grey[200],
         ),
       ),
     );
@@ -274,7 +265,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF4B2EFF),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -282,103 +273,95 @@ class _RegisterScreenState extends State<RegisterScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 180)
-                    .animate().fadeIn(duration: 500.ms),
-                SizedBox(height: 24),
-                Image.asset('assets/images/SUYO_LOGO.png', height: 60)
-                    .animate().fadeIn(duration: 500.ms, delay: 200.ms),
-                SizedBox(height: 12),
+                Image.asset('assets/images/SUYO_LOGO_LIGHTMODE.png', height: 100),
+                const SizedBox(height: 12),
                 RichText(
-                  text: TextSpan(
-                    style: TextStyle(fontSize: 16),
+                  text: const TextSpan(
                     children: [
-                      TextSpan(text: "Create ", style: TextStyle(color: Color(0xFFF56D16), fontWeight: FontWeight.bold)),
-                      TextSpan(text: "an account!", style: TextStyle(color: Color(0xFFC7C7C7))),
+                      TextSpan(text: "Create ", style: TextStyle(fontSize: 14, color: Color(0xFFF56D16), fontWeight: FontWeight.bold)),
+                      TextSpan(text: "an account!", style: TextStyle(fontSize: 14, color: Colors.black)),
                     ],
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 400.ms),
-
-                SizedBox(height: 32),
+                ),
+                const SizedBox(height: 32),
                 ...[
                   if (_userType == "Customer" || (_userType == "Service Provider" && !_isBusinessNameRequired)) ...[
                     _buildTextField(Icons.person_outline, "First Name", _firstNameController),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     _buildTextField(Icons.person_outline, "Last Name", _lastNameController),
                   ] else
                     _buildTextField(Icons.store_mall_directory_outlined, "Business Name", _businessNameController),
-                ].animate(interval: 100.ms),
-
-                SizedBox(height: 16),
-                _buildTextField(Icons.email_outlined, "Email", _emailController)
-                    .animate().fadeIn(duration: 500.ms, delay: 600.ms),
-                SizedBox(height: 16),
+                ],
+                const SizedBox(height: 16),
+                _buildTextField(Icons.email_outlined, "Email", _emailController),
+                const SizedBox(height: 16),
                 _buildPasswordField(
                   icon: Icons.lock_outline,
                   hint: "Password",
                   controller: _passwordController,
                   isObscured: !_showPassword,
                   toggleVisibility: () => setState(() => _showPassword = !_showPassword),
-                ).animate().fadeIn(duration: 500.ms, delay: 700.ms),
-                SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
                 _buildPasswordField(
                   icon: Icons.lock_outline,
                   hint: "Confirm Password",
                   controller: _confirmPasswordController,
                   isObscured: !_showConfirmPassword,
                   toggleVisibility: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
-                ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
-
-                SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    ChoiceChip(
-                      label: Text('Customer'),
-                      selected: _userType == "Customer",
-                      onSelected: (_) {
+                    OutlinedButton(
+                      onPressed: () {
                         setState(() {
                           _userType = "Customer";
                           _selectedServiceCategory = null;
                         });
                       },
-                      selectedColor: Color(0xFFF56D16),
-                      labelStyle: TextStyle(color: Colors.white),
-                      backgroundColor: Color(0xFF3A22CC),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _userType == "Customer" ? Colors.white : Colors.black),
+                        backgroundColor: _userType == "Customer" ? Color(0xFFF56D16) : Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: Text('Customer', style: TextStyle(color: _userType == "Customer" ? Colors.white : Colors.black)),
                     ),
-                    SizedBox(width: 12),
-                    ChoiceChip(
-                      label: Text('Service Provider'),
-                      selected: _userType == "Service Provider",
-                      onSelected: (_) => setState(() => _userType = "Service Provider"),
-                      selectedColor: Color(0xFFF56D16),
-                      labelStyle: TextStyle(color: Colors.white),
-                      backgroundColor: Color(0xFF3A22CC),
+                    const SizedBox(width: 12),
+                    OutlinedButton(
+                      onPressed: () => setState(() => _userType = "Service Provider"),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: _userType == "Service Provider" ? Colors.white : Colors.black),
+                        backgroundColor: _userType == "Service Provider" ? Color(0xFFF56D16) : Colors.transparent,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                      child: Text('Service Provider', style: TextStyle(color: _userType == "Service Provider" ? Colors.white : Colors.black)),
                     ),
                   ],
-                ).animate().fadeIn(duration: 500.ms, delay: 900.ms),
-
+                ),
                 if (_userType == "Service Provider") ...[
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.75,
                     child: DropdownButtonFormField<String>(
                       decoration: InputDecoration(
                         prefixIcon: Padding(
                           padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-                          child: Icon(Icons.business_center, color: Color(0xFFF56D16)),
+                          child: Icon(Icons.business_center, color: Colors.grey),
                         ),
                         filled: true,
-                        fillColor: Color(0xFF3A22CC),
+                        fillColor: Colors.grey[200],
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(30),
                           borderSide: BorderSide.none,
                         ),
                       ),
-                      dropdownColor: Color(0xFF3A22CC),
-                      iconEnabledColor: Colors.white70,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                      dropdownColor: Colors.grey[200],
+                      iconEnabledColor: Colors.grey,
+                      style: TextStyle(color: Colors.black, fontSize: 16),
                       value: _selectedServiceCategory,
-                      hint: Text("Select Service Category", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                      hint: Text("Select Service Category", style: TextStyle(color: Colors.grey, fontSize: 16)),
                       onChanged: (value) => setState(() => _selectedServiceCategory = value),
                       items: _serviceCategories.map((category) {
                         return DropdownMenuItem(
@@ -389,9 +372,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
-
                 if (_needsLocationPin) ...[
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   ElevatedButton.icon(
                     onPressed: _pickLocationOnMap,
                     icon: Icon(Icons.location_pin, color: Colors.white),
@@ -406,8 +388,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
-
-                SizedBox(height: 24),
+                const SizedBox(height: 24),
                 SizedBox(
                   height: 50,
                   width: MediaQuery.of(context).size.width * 0.55,
@@ -417,20 +398,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ? CircularProgressIndicator(color: Colors.white)
                         : Text("Register", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFF56D16),
+                      backgroundColor: Color(0xFF4B2EFF),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       padding: EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 1200.ms),
-
-                SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: Text.rich(
                     TextSpan(
                       text: "Already have an account? ",
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(color: Colors.black),
                       children: [
                         TextSpan(
                           text: "Login",
@@ -439,7 +419,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ],
                     ),
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 1400.ms),
+                ),
               ],
             ),
           ),

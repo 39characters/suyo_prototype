@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -13,7 +12,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _isLoading = false;
-  bool _showPassword = false;
 
   @override
   void initState() {
@@ -81,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordController.text.trim().isNotEmpty;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF4B2EFF),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -89,46 +87,56 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset('assets/images/SUYO_LOGIN_ART.png', height: 280)
-                    .animate().fadeIn(duration: 500.ms, curve: Curves.easeOut),
-                const SizedBox(height: 24),
-                Image.asset('assets/images/SUYO_LOGO.png', height: 100)
-                    .animate().fadeIn(duration: 500.ms, delay: 200.ms),
+                Image.asset('assets/images/SUYO_LOGO_LIGHTMODE.png', height: 100),
                 const SizedBox(height: 12),
                 RichText(
                   text: const TextSpan(
                     children: [
-                      TextSpan(text: "Need help? ", style: TextStyle(fontSize: 14, color: Colors.white)),
+                      TextSpan(text: "Need help? ", style: TextStyle(fontSize: 14, color: Colors.black)),
                       TextSpan(
                         text: "We got you.",
                         style: TextStyle(fontSize: 14, color: Color(0xFFF56D16), fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 400.ms),
-
+                ),
                 const SizedBox(height: 32),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
-                  child: _buildTextField(
-                    icon: Icons.person_outline,
-                    hint: "Email",
-                    obscure: false,
+                  child: TextField(
                     controller: _emailController,
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.person_outline, color: Colors.grey),
+                      hintText: "Email",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                    ),
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 600.ms),
-
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
-                  child: _buildTextField(
-                    icon: Icons.lock_outline,
-                    hint: "Password",
-                    obscure: true,
+                  child: TextField(
                     controller: _passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                      hintText: "Password",
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(30),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey[200],
+                    ),
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 800.ms),
-
+                ),
                 const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
@@ -141,43 +149,37 @@ class _LoginScreenState extends State<LoginScreen> {
                             value: _rememberMe,
                             onChanged: (value) => setState(() => _rememberMe = value ?? false),
                           ),
-                          const Text("Remember Me", style: TextStyle(color: Colors.white)),
+                          const Text("Remember Me", style: TextStyle(color: Colors.black)),
                         ],
                       ),
                       TextButton(
                         onPressed: () {},
-                        child: const Text("Forgot Password?", style: TextStyle(color: Colors.white)),
-                      )
+                        child: const Text("Forgot Password?", style: TextStyle(color: Colors.blue)),
+                      ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 1.seconds),
-
+                ),
                 const SizedBox(height: 16),
-                AnimatedScale(
-                  scale: _isLoading ? 0.95 : 1.0,
-                  duration: const Duration(milliseconds: 150),
-                  child: SizedBox(
-                    height: 50,
-                    width: MediaQuery.of(context).size.width * 0.55,
-                    child: ElevatedButton(
-                      onPressed: (!_isLoading && isInputValid) ? _login : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF56D16),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
+                SizedBox(
+                  height: 50,
+                  width: MediaQuery.of(context).size.width * 0.55,
+                  child: ElevatedButton(
+                    onPressed: (!_isLoading && isInputValid) ? _login : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Color(0xFF4B2EFF),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 1200.ms),
-
+                ),
                 const SizedBox(height: 24),
                 RichText(
                   text: TextSpan(
                     children: [
-                      const TextSpan(text: "Don't have an account? ", style: TextStyle(color: Colors.white)),
+                      const TextSpan(text: "Don't have an account? ", style: TextStyle(color: Colors.black)),
                       WidgetSpan(
                         child: GestureDetector(
                           onTap: () => Navigator.pushNamed(context, '/register'),
@@ -192,53 +194,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                ).animate().fadeIn(duration: 500.ms, delay: 1400.ms),
+                ),
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required IconData icon,
-    required String hint,
-    required bool obscure,
-    required TextEditingController controller,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscure ? !_showPassword : false,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 16.0, right: 12.0),
-          child: Icon(icon, color: const Color(0xFFF56D16)),
-        ),
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: const Color(0xFF3A22CC),
-        suffixIcon: obscure
-            ? Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: IconButton(
-                  icon: Icon(
-                    _showPassword ? Icons.visibility_off : Icons.visibility,
-                    color: const Color(0xFFC7C7C7).withOpacity(0.65),
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _showPassword = !_showPassword;
-                    });
-                  },
-                ),
-              )
-            : null,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
         ),
       ),
     );

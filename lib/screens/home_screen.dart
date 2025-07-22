@@ -19,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Map<String, dynamic>? _pendingBooking;
   String? _pendingBookingId;
   bool _hasOngoingBooking = false;
+  String? _displayName; // New field to store the user's name
 
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -28,6 +29,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     super.initState();
     _checkPendingOrInProgressBooking();
     debugBookings();
+    _fetchUserName(); // Fetch the user's name from Firestore
 
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -75,6 +77,24 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _pendingBooking = snapshot.docs.first.data();
         _pendingBookingId = snapshot.docs.first.id;
         _hasOngoingBooking = true;
+      });
+    }
+  }
+
+  Future<void> _fetchUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (snapshot.exists) {
+      final data = snapshot.data() as Map<String, dynamic>;
+      final displayName = "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+      setState(() {
+        _displayName = displayName.isEmpty ? 'User' : displayName;
       });
     }
   }
@@ -190,58 +210,74 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       _buildProfile(),
     ];
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
-        elevation: 1,
-        title: Text(
-          _selectedTab == 0
-              ? "Book a Service!"
-              : _selectedTab == 1
-                  ? "Your Receipts"
-                  : "Your Profile",
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        centerTitle: true,
-      ),
-      backgroundColor: Colors.grey[200], // Dimmer, industry-standard gray
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: _pages[_selectedTab],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF4B2EFF),
-        unselectedItemColor: Colors.grey,
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        unselectedLabelStyle: const TextStyle(fontSize: 14),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined, size: 28),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long, size: 28),
-            label: 'Receipts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline, size: 28),
-            label: 'Profile',
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 5,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Color(0xFF4B2EFF),
+          elevation: 1,
+          title: Text(
+            _selectedTab == 0
+                ? "Book a Service!"
+                : _selectedTab == 1
+                    ? "Your Receipts"
+                    : "Your Profile",
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        backgroundColor: Colors.grey[200],
+        body: FadeTransition(
+          opacity: _fadeAnimation,
+          child: _pages[_selectedTab],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF4B2EFF),
+          unselectedItemColor: Colors.grey,
+          currentIndex: _selectedTab,
+          onTap: _onTabTapped,
+          type: BottomNavigationBarType.fixed,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontSize: 14),
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined, size: 28),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.receipt_long, size: 28),
+              label: 'Receipts',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline, size: 28),
+              label: 'Profile',
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHomeContent() {
+    final String greeting = _displayName != null && _displayName!.isNotEmpty
+        ? "Hello, $_displayName!"
+        : "Hello, User!"; // Fallback if name isn't fetched yet
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,11 +317,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
           const SizedBox(height: 16),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: Text(
-              'Book a Service!',
-              style: TextStyle(
+              greeting,
+              style: const TextStyle(
                 color: Colors.black87,
                 fontSize: 24,
                 fontWeight: FontWeight.w700,

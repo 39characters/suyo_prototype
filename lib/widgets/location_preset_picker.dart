@@ -16,7 +16,7 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
   return await showModalBottomSheet<Map<String, dynamic>>(
     context: context,
     isScrollControlled: true,
-    barrierColor: Colors.black.withOpacity(0.6), // Dark tint background
+    barrierColor: Colors.black.withOpacity(0.6),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
@@ -68,7 +68,7 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: ListTile(
-                        leading: const Icon(Icons.place, color: Colors.deepPurple, size: 28),
+                        leading: const Icon(Icons.place, color: Color(0xFF4B2EFF), size: 28),
                         title: Text(
                           data['label'] ?? 'Unnamed Location',
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
@@ -80,7 +80,16 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
-                            await docs[index].reference.delete();
+                            try {
+                              await docs[index].reference.delete();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text("Location deleted")),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text("Failed to delete location: $e")),
+                              );
+                            }
                           },
                         ),
                         onTap: () => Navigator.pop(context, data),
@@ -96,26 +105,36 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final position = await Geolocator.getCurrentPosition();
-                      final result = await _promptDetails(context);
-                      if (result != null) {
-                        await presetsRef.add({
-                          'label': result['label'],
-                          'name': result['name'],
-                          'contactNumber': result['contactNumber'],
-                          'address': result['address'],
-                          'lat': position.latitude,
-                          'lng': position.longitude,
-                          'createdAt': FieldValue.serverTimestamp(),
-                        });
-                        // Close the modal without reopening
-                        Navigator.pop(context);
+                      try {
+                        final position = await Geolocator.getCurrentPosition();
+                        final result = await _promptDetails(context);
+                        if (result != null) {
+                          await presetsRef.add({
+                            'label': result['label'],
+                            'name': result['name'],
+                            'contactNumber': result['contactNumber'],
+                            'address': result['address'],
+                            'lat': position.latitude,
+                            'lng': position.longitude,
+                            'createdAt': FieldValue.serverTimestamp(),
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Location '${result['label']}' added"),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Failed to add location: $e")),
+                        );
                       }
                     },
                     icon: const Icon(Icons.my_location, size: 20),
                     label: const Text("Add Current Location"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: Color(0xFF4B2EFF),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -128,28 +147,38 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      final picked = await _pickLocationOnMap(context);
-                      if (picked != null) {
-                        final result = await _promptDetails(context);
-                        if (result != null) {
-                          await presetsRef.add({
-                            'label': result['label'],
-                            'name': result['name'],
-                            'contactNumber': result['contactNumber'],
-                            'address': result['address'],
-                            'lat': picked.latitude,
-                            'lng': picked.longitude,
-                            'createdAt': FieldValue.serverTimestamp(),
-                          });
-                          // Close the modal without reopening
-                          Navigator.pop(context);
+                      try {
+                        final picked = await _pickLocationOnMap(context);
+                        if (picked != null) {
+                          final result = await _promptDetails(context);
+                          if (result != null) {
+                            await presetsRef.add({
+                              'label': result['label'],
+                              'name': result['name'],
+                              'contactNumber': result['contactNumber'],
+                              'address': result['address'],
+                              'lat': picked.latitude,
+                              'lng': picked.longitude,
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text("Location '${result['label']}' added"),
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
                         }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Failed to add location: $e")),
+                        );
                       }
                     },
                     icon: const Icon(Icons.map, size: 20),
                     label: const Text("Pick on Map"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: Color(0xFF4B2EFF),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
@@ -161,6 +190,15 @@ Future<Map<String, dynamic>?> showPresetPickerModal(BuildContext context) async 
               ],
             ),
             const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  "Close",
+                  style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+              ),
+            ),
           ],
         ),
       );
@@ -176,8 +214,8 @@ Future<Map<String, String>?> _promptDetails(BuildContext context) async {
 
   return await showDialog<Map<String, String>>(
     context: context,
-    barrierDismissible: false, // Prevent closing by tapping outside
-    barrierColor: Colors.black.withOpacity(0.6), // Dark tint background
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.6),
     builder: (context) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text(
@@ -230,7 +268,7 @@ Future<Map<String, String>?> _promptDetails(BuildContext context) async {
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context), // Return to preset picker
+          onPressed: () => Navigator.pop(context),
           child: const Text(
             "Cancel",
             style: TextStyle(fontSize: 16, color: Colors.grey),
@@ -255,7 +293,7 @@ Future<Map<String, String>?> _promptDetails(BuildContext context) async {
             });
           },
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
+            backgroundColor: Color(0xFF4B2EFF),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
@@ -272,8 +310,8 @@ Future<LatLng?> _pickLocationOnMap(BuildContext context) async {
 
   return await showDialog<LatLng>(
     context: context,
-    barrierDismissible: false, // Prevent closing by tapping outside
-    barrierColor: Colors.black.withOpacity(0.6), // Dark tint background
+    barrierDismissible: false,
+    barrierColor: Colors.black.withOpacity(0.6),
     builder: (context) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       title: const Text(
@@ -282,13 +320,19 @@ Future<LatLng?> _pickLocationOnMap(BuildContext context) async {
       ),
       content: SizedBox(
         width: double.maxFinite,
-        height: 400, // Increased height for better map visibility
+        height: 400,
         child: Stack(
           children: [
             GoogleMap(
               onMapCreated: (controller) async {
-                final style = await DefaultAssetBundle.of(context).loadString('assets/map_style.json');
-                controller.setMapStyle(style);
+                try {
+                  final style = await DefaultAssetBundle.of(context).loadString('assets/map_style.json');
+                  controller.setMapStyle(style);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Failed to load map style: $e")),
+                  );
+                }
               },
               initialCameraPosition: const CameraPosition(target: defaultCenter, zoom: 15),
               onCameraMove: (position) => tempSelected = position.target,
@@ -300,14 +344,14 @@ Future<LatLng?> _pickLocationOnMap(BuildContext context) async {
             ),
             const Align(
               alignment: Alignment.center,
-              child: Icon(Icons.location_on, size: 48, color: Colors.deepPurple),
+              child: Icon(Icons.location_on, size: 48, color: Color(0xFF4B2EFF)),
             ),
           ],
         ),
       ),
       actions: [
         TextButton(
-          onPressed: () => Navigator.pop(context), // Return to preset picker
+          onPressed: () => Navigator.pop(context),
           child: const Text(
             "Cancel",
             style: TextStyle(fontSize: 16, color: Colors.grey),
@@ -316,7 +360,7 @@ Future<LatLng?> _pickLocationOnMap(BuildContext context) async {
         ElevatedButton(
           onPressed: () => Navigator.pop(context, tempSelected),
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.deepPurple,
+            backgroundColor: Color(0xFF4B2EFF),
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),

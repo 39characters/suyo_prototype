@@ -721,12 +721,12 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: Color(0xFF4B2EFF),
         elevation: 1,
         title: Text(
           displayName != null ? "Welcome, $displayName!" : "Provider Dashboard",
           style: const TextStyle(
-            color: Colors.black87,
+            color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
