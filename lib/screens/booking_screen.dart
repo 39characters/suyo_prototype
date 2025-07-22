@@ -461,7 +461,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                             return InkWell(
                                               onTap: () => setState(() => _selectedProvider = p),
                                               child: Container(
-                                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16), // Added horizontal padding
                                                 decoration: BoxDecoration(
                                                   color: isSelected ? const Color(0xFFEDEBFF) : Colors.transparent,
                                                   borderRadius: BorderRadius.circular(8),
@@ -469,12 +469,23 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                                 child: Row(
                                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                   children: [
-                                                    Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(p['name'], style: TextStyle(fontWeight: FontWeight.bold, color: isSelected ? const Color(0xFF4B2EFF) : Colors.black)),
-                                                        Text("ETA: ${p['eta']} (${p['distance']} km)", style: const TextStyle(fontSize: 12)),
-                                                      ],
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Text(
+                                                            p['name'],
+                                                            style: TextStyle(
+                                                              fontWeight: FontWeight.bold,
+                                                              color: isSelected ? const Color(0xFF4B2EFF) : Colors.black,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            "ETA: ${p['eta']} (${p['distance']} km)",
+                                                            style: const TextStyle(fontSize: 12),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
                                                     Row(
                                                       children: [
@@ -482,7 +493,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                                                         const SizedBox(width: 4),
                                                         Text("${p['rating']}"),
                                                       ],
-                                                    )
+                                                    ),
                                                   ],
                                                 ),
                                               ),
@@ -504,12 +515,12 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                             ),
                             Positioned(
                               top: 0,
-                              left: MediaQuery.of(context).size.width / 2 - 40,
+                              left: 0,
+                              right: 0,
                               child: GestureDetector(
                                 onTap: _toggleSheet,
                                 behavior: HitTestBehavior.translucent,
                                 child: Container(
-                                  width: 80,
                                   height: 40,
                                   alignment: Alignment.center,
                                   child: Container(

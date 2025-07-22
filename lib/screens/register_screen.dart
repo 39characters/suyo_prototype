@@ -644,7 +644,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
-                  height: 50,
+                  height: 55,
                   width: MediaQuery.of(context).size.width * 0.55,
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _register,

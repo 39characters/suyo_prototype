@@ -161,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  height: 50,
+                  height: 55,
                   width: MediaQuery.of(context).size.width * 0.55,
                   child: ElevatedButton(
                     onPressed: (!_isLoading && isInputValid) ? _login : null,
