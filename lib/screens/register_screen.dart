@@ -21,6 +21,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   String _userType = "Customer";
   String? _selectedServiceCategory;
+  bool _hasReadPrivacyPolicy = false;
+  bool _privacyPolicyChecked = false;
+  ScrollController _privacyPolicyScrollController = ScrollController();
 
   final List<String> _serviceCategories = [
     'Laundry Service',
@@ -103,7 +106,85 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
+  void _showPrivacyPolicy() {
+    bool hasScrolledToEnd = false;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        // Use StatefulBuilder to manage state within the dialog
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            _privacyPolicyScrollController.addListener(() {
+              if (_privacyPolicyScrollController.position.pixels >=
+                  _privacyPolicyScrollController.position.maxScrollExtent - 10) {
+                setDialogState(() {
+                  hasScrolledToEnd = true;
+                });
+              }
+            });
+
+            return AlertDialog(
+              title: Text('SUYO Privacy Policy - $_userType'),
+              content: Container(
+                width: double.maxFinite,
+                height: 300,
+                child: SingleChildScrollView(
+                  controller: _privacyPolicyScrollController,
+                  child: RichText(
+                    text: _userType == "Customer"
+                        ? _customerPrivacyPolicy
+                        : _serviceProviderPrivacyPolicy,
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      _privacyPolicyChecked = false;
+                      _hasReadPrivacyPolicy = false;
+                    });
+                    Navigator.pop(dialogContext);
+                  },
+                  child: Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: hasScrolledToEnd
+                      ? () {
+                          setState(() {
+                            _hasReadPrivacyPolicy = true;
+                            _privacyPolicyChecked = true;
+                          });
+                          Navigator.pop(dialogContext);
+                        }
+                      : null,
+                  child: Text(
+                    "Accept",
+                    style: TextStyle(
+                      color: hasScrolledToEnd ? Colors.black : Colors.grey,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ).then((_) {
+      // Dispose the listener when dialog is closed to prevent memory leaks
+      _privacyPolicyScrollController.removeListener(() {});
+    });
+  }
+
   void _register() async {
+    if (!_privacyPolicyChecked) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Please read and accept the privacy policy")),
+      );
+      return;
+    }
+
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Passwords do not match")),
@@ -205,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _privacyPolicyScrollController.dispose();
     super.dispose();
   }
 
@@ -261,6 +343,144 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
+  TextSpan get _customerPrivacyPolicy => TextSpan(
+        children: [
+          TextSpan(
+            text: 'SUYO Customer Privacy Policy\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          TextSpan(
+            text: 'Overview\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'By creating an account as a Customer, you agree that SUYO may collect and use your personal information as outlined below.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Information We Collect\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: '- Name\n- Email address\n- Phone number\n- Home address (including saved booking locations)\n- Device location (for booking matching)\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'How We Use Your Information\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your data is used solely to:\n- Manage your bookings\n- Match you with nearby service providers\n- Communicate updates regarding your requests\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Data Sharing\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your information will not be shared with third parties without your explicit consent.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your Rights\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'You may request to view or delete your account at any time through the profile settings in the SUYO app.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Data Security\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'We implement secure practices to protect your personal information from unauthorized access or disclosure.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Contact Us\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'For any questions or concerns about this policy, please contact us at privacy@suyoapp.com.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Last updated: July 23, 2025',
+            style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+          ),
+        ],
+      );
+
+  TextSpan get _serviceProviderPrivacyPolicy => TextSpan(
+        children: [
+          TextSpan(
+            text: 'SUYO Service Provider Privacy Policy\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
+          TextSpan(
+            text: 'Overview\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'By creating an account as a Service Provider, you agree that SUYO may collect and use your personal information as outlined below.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Information We Collect\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: '- Business Name (or Real Name if individual)\n- Email address\n- Phone number\n- Coverage area / work location\n- Booking history\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'How We Use Your Information\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your data is used to:\n- Match you with service requests\n- Help customers recognize and book your services\n- Track completed jobs and job performance\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Data Sharing\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your personal data will remain private and will not be shared with other providers or third parties.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Your Rights\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'You can access or delete your account and data at any time through the app settings.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Data Security\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'SUYO applies data security measures using Firebase protections to safeguard your information.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Contact Us\n\n',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
+          TextSpan(
+            text: 'For any questions or concerns about this policy, please contact us at privacy@suyoapp.com.\n\n',
+            style: TextStyle(fontSize: 14),
+          ),
+          TextSpan(
+            text: 'Last updated: July 23, 2025',
+            style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+          ),
+        ],
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -319,6 +539,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         setState(() {
                           _userType = "Customer";
                           _selectedServiceCategory = null;
+                          _privacyPolicyChecked = false;
+                          _hasReadPrivacyPolicy = false;
                         });
                       },
                       style: OutlinedButton.styleFrom(
@@ -330,7 +552,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton(
-                      onPressed: () => setState(() => _userType = "Service Provider"),
+                      onPressed: () {
+                        setState(() {
+                          _userType = "Service Provider";
+                          _privacyPolicyChecked = false;
+                          _hasReadPrivacyPolicy = false;
+                        });
+                      },
                       style: OutlinedButton.styleFrom(
                         side: BorderSide(color: _userType == "Service Provider" ? Colors.white : Colors.black),
                         backgroundColor: _userType == "Service Provider" ? Color(0xFFF56D16) : Colors.transparent,
@@ -388,6 +616,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ],
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Checkbox(
+                      value: _privacyPolicyChecked,
+                      onChanged: (value) {
+                        if (value == true) {
+                          _showPrivacyPolicy();
+                        } else {
+                          setState(() {
+                            _privacyPolicyChecked = false;
+                            _hasReadPrivacyPolicy = false;
+                          });
+                        }
+                      },
+                    ),
+                    GestureDetector(
+                      onTap: _showPrivacyPolicy,
+                      child: Text(
+                        "I agree to the SUYO ${_userType} Privacy Policy",
+                        style: TextStyle(color: Color(0xFF4B2EFF)),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 SizedBox(
                   height: 50,
