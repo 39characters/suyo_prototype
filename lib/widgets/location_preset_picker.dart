@@ -344,7 +344,7 @@ Future<LatLng?> _pickLocationOnMap(BuildContext context) async {
             ),
             const Align(
               alignment: Alignment.center,
-              child: Icon(Icons.location_on, size: 48, color: Color(0xFF4B2EFF)),
+              child: Icon(Icons.location_on, size: 48, color: Color(0xFFF56D16)),
             ),
           ],
         ),

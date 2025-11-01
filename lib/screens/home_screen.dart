@@ -556,18 +556,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   style: TextStyle(fontSize: 16),
                 ),
                 actions: [
-                  ElevatedButton(
+                  TextButton(
                     onPressed: () async {
                       await FirebaseAuth.instance.signOut();
                       if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
                     },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF4B2EFF),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      elevation: 2,
-                    ),
                     child: const Text(
                       "OK",
                       style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
@@ -577,7 +570,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             );
           });
-
           return const Center(
             child: Text(
               "User data not found",
@@ -638,30 +630,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   await FirebaseAuth.instance.signOut();
                   if (mounted) Navigator.pushReplacementNamed(context, '/');
                 },
-                icon: const Icon(Icons.logout, size: 20, color: Color(0xFF4B2EFF)),
+                icon: const Icon(Icons.logout, size: 20, color: Colors.white),
                 label: const Text(
                   "Sign Out",
-                  style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+                  style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
+                  backgroundColor: const Color(0xFF4B2EFF),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   minimumSize: const Size(200, 50),
-                  elevation: 2,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               OutlinedButton.icon(
                 onPressed: _deleteUserData,
-                icon: const Icon(Icons.delete_forever, size: 20, color: Color(0xFF4B2EFF)),
+                icon: const Icon(Icons.delete_forever, size: 20, color: Colors.red),
                 label: const Text(
                   "Delete Account",
-                  style: TextStyle(fontSize: 16, color: Color(0xFF4B2EFF)),
+                  style: TextStyle(fontSize: 16, color: Colors.red),
                 ),
                 style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFF4B2EFF)),
+                  side: const BorderSide(color: Colors.red),
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   minimumSize: const Size(200, 50),
