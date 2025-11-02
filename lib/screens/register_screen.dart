@@ -80,7 +80,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 Align(
                   alignment: Alignment.center,
-                  child: Icon(Icons.location_on, size: 48, color: Colors.white),
+                  child: Icon(Icons.location_on, size: 48, color: Color(0xFFF56D16)),
                 ),
               ],
             ),
@@ -622,6 +622,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Checkbox(
                       value: _privacyPolicyChecked,
+                      activeColor: const Color(0xFF4B2EFF),
                       onChanged: (value) {
                         if (value == true) {
                           _showPrivacyPolicy();

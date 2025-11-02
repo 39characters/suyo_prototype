@@ -12,6 +12,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
   bool _isLoading = false;
+  bool _showPassword = false; // ✅ added this for toggle
 
   @override
   void initState() {
@@ -101,14 +102,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+
+                // EMAIL FIELD
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
                   child: TextField(
                     controller: _emailController,
                     decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.person_outline, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.person_outline, color: Colors.grey),
                       hintText: "Email",
-                      hintStyle: TextStyle(color: Colors.grey),
+                      hintStyle: const TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -119,15 +122,24 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // PASSWORD FIELD with TOGGLE
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
                   child: TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: !_showPassword,
                     decoration: InputDecoration(
-                      prefixIcon: Icon(Icons.lock_outline, color: Colors.grey),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showPassword ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.grey[600],
+                        ),
+                        onPressed: () => setState(() => _showPassword = !_showPassword),
+                      ),
                       hintText: "Password",
-                      hintStyle: TextStyle(color: Colors.grey),
+                      hintStyle: const TextStyle(color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(30),
                         borderSide: BorderSide.none,
@@ -137,6 +149,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 8),
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.75,
@@ -161,13 +174,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // LOGIN BUTTON
                 SizedBox(
                   height: 55,
                   width: MediaQuery.of(context).size.width * 0.55,
                   child: ElevatedButton(
                     onPressed: (!_isLoading && isInputValid) ? _login : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF4B2EFF),
+                      backgroundColor: const Color(0xFF4B2EFF),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
@@ -176,6 +191,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         : const Text("Login", style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.w600)),
                   ),
                 ),
+
                 const SizedBox(height: 24),
                 RichText(
                   text: TextSpan(
