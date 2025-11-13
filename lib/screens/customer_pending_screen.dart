@@ -27,6 +27,7 @@ class CustomerPendingScreen extends StatefulWidget {
   State<CustomerPendingScreen> createState() => _CustomerPendingScreenState();
 }
 
+Map<String, dynamic>? _currentProvider;
 class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
   StreamSubscription<DocumentSnapshot>? _bookingSubscription;
   Timer? _timer;
@@ -37,6 +38,7 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
     super.initState();
     _listenToBookingStatus();
     _startTimer();
+    _currentProvider = _currentProvider;
   }
 
   void _startTimer() {
@@ -59,15 +61,47 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
       List<dynamic> eligibleProviders = data['eligibleProviders'] ?? [];
 
       // --- Booking accepted ---
+      // --- Auto-accept simulation ---
+const String appMode = "auto_accept_provider"; // change per branch: "default", "auto_accept_customer", "auto_accept_provider"
+
+if (appMode != "default" && status == 'pending') {
+  Future.delayed(const Duration(seconds: 2), () async {
+    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+
+    // Assign a dummy provider if none exists
+    final providerData = {
+      'id': 'auto_provider',
+      'name': 'Auto-Assigned Provider',
+      'photoUrl': null,
+      'eta': '30 mins',
+      'distance': '1.0',
+    };
+
+    await bookingRef.update({
+      'status': 'accepted',
+      'providerId': 'auto_provider',
+      'providerAcceptedAt': Timestamp.now(),
+      'provider': providerData,
+    });
+
+    if (mounted) {
+      setState(() {
+        _currentProvider = providerData; // safe assignment for UI
+      });
+    }
+  });
+}
+
+      // --- Booking accepted ---
       if (status == 'accepted') {
         _bookingSubscription?.cancel();
         _timer?.cancel();
 
         final startedAt = DateFormat('h:mm a').format(DateTime.now());
-        final eta = widget.provider?['eta'] ?? "30 mins";
+        final eta = _currentProvider?['eta'] ?? "30 mins";
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('🎉 A provider has accepted your booking!')),
+          const SnackBar(content: Text('🎉 Booking accepted!')),
         );
 
         Navigator.pushReplacement(
@@ -75,7 +109,12 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
           MaterialPageRoute(
             builder: (_) => JobInProgressScreen(
               bookingId: widget.bookingId,
-              provider: widget.provider,
+              provider: _currentProvider ?? {
+                'id': 'auto_provider',
+                'name': 'Auto-Assigned Provider',
+                'eta': '30 mins',
+                'distance': '1.0'
+              },
               serviceCategory: widget.serviceCategory,
               price: widget.price,
               location: data['location'],
@@ -87,6 +126,7 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
         return;
       }
 
+
       // --- Booking declined ---
       if (status == 'declined') {
         if (serviceType.toLowerCase() == 'business') {
@@ -97,7 +137,7 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
           });
         } else {
           // Errands: remove this provider from eligible list
-          eligibleProviders.remove(widget.provider?['uid']);
+          eligibleProviders.remove(_currentProvider?['uid']);
           if (eligibleProviders.isEmpty) {
             await bookingRef.update({
               'status': 'cancelled',
@@ -261,17 +301,17 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
                 color: const Color(0xFFF1F3FF),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: widget.provider != null
+                  child: _currentProvider != null
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text("👤 Provider Info", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                             const SizedBox(height: 12),
-                            Text("Name: ${widget.provider!['name']}", style: const TextStyle(fontSize: 16)),
+                            Text("Name: ${_currentProvider!['name']}", style: const TextStyle(fontSize: 16)),
                             const SizedBox(height: 4),
-                            Text("Distance: ${widget.provider!['distance']} km", style: const TextStyle(fontSize: 16)),
+                            Text("Distance: ${_currentProvider!['distance']} km", style: const TextStyle(fontSize: 16)),
                             const SizedBox(height: 4),
-                            Text("ETA: ${widget.provider!['eta']}", style: const TextStyle(fontSize: 16)),
+                            Text("ETA: ${_currentProvider!['eta']}", style: const TextStyle(fontSize: 16)),
                           ],
                         )
                       : Column(
