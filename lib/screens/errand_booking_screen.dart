@@ -151,6 +151,29 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
       isWaiting = true;
     });
 
+    // --- AUTO-ACCEPT SIMULATION ---
+    // change "auto_accept_provider" to "default" to disable
+    const String appMode = "auto_accept_provider"; 
+    if (appMode != "default") {
+      Future.delayed(const Duration(seconds: 2), () async {
+        final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(bookingId);
+        final providerData = {
+          'id': 'auto_provider',
+          'name': 'Auto-Assigned Provider',
+          'photoUrl': null,
+          'eta': '30 mins',
+          'distance': '1.0',
+        };
+
+        await bookingRef.update({
+          'status': 'accepted',
+          'providerId': 'auto_provider',
+          'providerAcceptedAt': Timestamp.now(),
+          'provider': providerData,
+        });
+      });
+    }
+
     // Wait for provider to accept
     bookingListener = FirebaseFirestore.instance
         .collection('bookings')
@@ -194,6 +217,7 @@ class _ErrandBookingScreenState extends State<ErrandBookingScreen> with TickerPr
         );
       }
     });
+
   }
 
   Future<void> _cancelBooking() async {
