@@ -50,40 +50,97 @@ class _CustomerPendingScreenState extends State<CustomerPendingScreen> {
   void _listenToBookingStatus() {
     final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
 
-    _bookingSubscription = bookingRef.snapshots().listen((snapshot) {
-      if (snapshot.exists) {
-        final data = snapshot.data() as Map<String, dynamic>;
-        final status = data['status'];
+    _bookingSubscription = bookingRef.snapshots().listen((snapshot) async {
+      if (!snapshot.exists) return;
 
-        if (status == 'accepted') {
-          _bookingSubscription?.cancel();
-          _timer?.cancel();
+      final data = snapshot.data() as Map<String, dynamic>;
+      final status = data['status'];
+      final serviceType = data['serviceCategory'];
+      List<dynamic> eligibleProviders = data['eligibleProviders'] ?? [];
 
-          final String startedAt = DateFormat('h:mm a').format(DateTime.now());
-          final String eta = widget.provider?['eta'] ?? "30 mins";
+      // --- Booking accepted ---
+      if (status == 'accepted') {
+        _bookingSubscription?.cancel();
+        _timer?.cancel();
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('🎉 A provider has accepted your booking!')),
-          );
+        final startedAt = DateFormat('h:mm a').format(DateTime.now());
+        final eta = widget.provider?['eta'] ?? "30 mins";
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => JobInProgressScreen(
-                bookingId: widget.bookingId,
-                provider: widget.provider,
-                serviceCategory: widget.serviceCategory,
-                price: widget.price,
-                location: data['location'],
-                startedAt: startedAt,
-                eta: eta,
-              ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('🎉 A provider has accepted your booking!')),
+        );
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => JobInProgressScreen(
+              bookingId: widget.bookingId,
+              provider: widget.provider,
+              serviceCategory: widget.serviceCategory,
+              price: widget.price,
+              location: data['location'],
+              startedAt: startedAt,
+              eta: eta,
             ),
-          );
+          ),
+        );
+        return;
+      }
+
+      // --- Booking declined ---
+      if (status == 'declined') {
+        if (serviceType.toLowerCase() == 'business') {
+          // Cancel immediately for business bookings
+          await bookingRef.update({
+            'status': 'cancelled',
+            'cancelledAt': Timestamp.now(),
+          });
+        } else {
+          // Errands: remove this provider from eligible list
+          eligibleProviders.remove(widget.provider?['uid']);
+          if (eligibleProviders.isEmpty) {
+            await bookingRef.update({
+              'status': 'cancelled',
+              'cancelledAt': Timestamp.now(),
+            });
+          } else {
+            await bookingRef.update({'eligibleProviders': eligibleProviders});
+          }
         }
+      }
+
+      // --- Booking cancelled (any type) ---
+      if (status == 'cancelled') {
+        _bookingSubscription?.cancel();
+        _timer?.cancel();
+
+        if (!mounted) return;
+
+        await showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => AlertDialog(
+            title: const Text("Booking Cancelled"),
+            content: const Text(
+                "Your booking was cancelled by all available service providers. Please try again."),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => HomeScreen()),
+                    (route) => false,
+                  );
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
       }
     });
   }
+
 
   Future<void> _cancelBooking() async {
     try {

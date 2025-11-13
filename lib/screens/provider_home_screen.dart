@@ -229,102 +229,129 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   }
 
   Widget _buildJobList() {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('bookings')
-          .where('status', isEqualTo: 'pending')
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
+    final uid = currentUser?.uid;
+    if (uid == null) {
+      return const Center(child: Text("User not signed in", style: TextStyle(fontSize: 18)));
+    }
+
+    // Load provider category once
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
+      builder: (context, providerSnapshot) {
+        if (!providerSnapshot.hasData) {
           return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
         }
-        final jobs = snapshot.data!.docs;
-        if (jobs.isEmpty) {
-          return const Center(child: Text("No new jobs", style: TextStyle(fontSize: 18)));
-        }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: jobs.length,
-          itemBuilder: (context, index) {
-            final doc = jobs[index];
-            final job = doc.data() as Map<String, dynamic>;
-            final bookingId = doc.id;
-            final price = (job['price'] ?? 0).toDouble();
-            final loc = job['location'] as Map<String, dynamic>?;
-            final lat = loc?['lat']?.toStringAsFixed(6) ?? 'N/A';
-            final lng = loc?['lng']?.toStringAsFixed(6) ?? 'N/A';
-            final service = job['serviceCategory'] ?? 'Service';
-            final customerId = job['customerId'] as String?;
+        final providerData = providerSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final providerCategory = providerData['serviceCategory'] ?? '';
 
-            return Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "$service – ₱${price.toStringAsFixed(2)}",
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    FutureBuilder<String>(
-                      future: customerId != null ? _getCustomerName(customerId) : Future.value('Unknown'),
-                      builder: (_, snap) {
-                        final name = snap.data ?? (snap.connectionState == ConnectionState.waiting ? '...' : 'Unknown');
-                        return Text(
-                          "Customer: $name",
-                          style: const TextStyle(fontSize: 16),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Location: $lat, $lng",
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+        // StreamBuilder for bookings
+        return StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('bookings')
+              .where('status', isEqualTo: 'pending')
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
+            }
+
+            // Filter jobs for this provider
+            final jobs = snapshot.data!.docs.where((doc) {
+              final job = doc.data() as Map<String, dynamic>;
+              final jobCategory = (job['serviceCategory'] ?? '').toString();
+              final assignedProvider = job['providerId'] as String?;
+              return (assignedProvider == null && jobCategory == providerCategory) ||
+                  assignedProvider == uid;
+            }).toList();
+
+            if (jobs.isEmpty) {
+              return const Center(child: Text("No new jobs", style: TextStyle(fontSize: 18)));
+            }
+
+            return ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: jobs.length,
+              itemBuilder: (context, index) {
+                final doc = jobs[index];
+                final job = doc.data() as Map<String, dynamic>;
+                final bookingId = doc.id;
+                final price = (job['price'] ?? 0).toDouble();
+                final loc = job['location'] as Map<String, dynamic>?;
+                final lat = loc?['lat']?.toStringAsFixed(6) ?? 'N/A';
+                final lng = loc?['lng']?.toStringAsFixed(6) ?? 'N/A';
+                final service = job['serviceCategory'] ?? 'Service';
+                final customerId = job['customerId'] as String?;
+
+                return Card(
+                  elevation: 2,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ElevatedButton.icon(
-                          onPressed: () => _acceptBooking(bookingId, job),
-                          icon: const Icon(Icons.check_circle, size: 20),
-                          label: const Text("Accept", style: TextStyle(fontSize: 16)),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4B2EFF),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
+                        Text(
+                          "$service – ₱${price.toStringAsFixed(2)}",
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          onPressed: () => FirebaseFirestore.instance
-                              .collection('bookings')
-                              .doc(bookingId)
-                              .update({'status': 'declined'}),
-                          icon: const Icon(Icons.cancel, size: 20),
-                          label: const Text("Decline", style: TextStyle(fontSize: 16)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
+                        const SizedBox(height: 8),
+                        FutureBuilder<String>(
+                          future: customerId != null
+                              ? _getCustomerName(customerId)
+                              : Future.value('Unknown'),
+                          builder: (_, snap) {
+                            final name = snap.data ?? '...';
+                            return Text("Customer: $name", style: const TextStyle(fontSize: 16));
+                          },
+                        ),
+                        const SizedBox(height: 8),
+                        Text("Location: $lat, $lng", style: const TextStyle(fontSize: 16)),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () => _acceptBooking(bookingId, job),
+                              icon: const Icon(Icons.check_circle, size: 20),
+                              label: const Text("Accept", style: TextStyle(fontSize: 16)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF4B2EFF),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () => FirebaseFirestore.instance
+                                  .collection('bookings')
+                                  .doc(bookingId)
+                                  .update({'status': 'declined'}),
+                              icon: const Icon(Icons.cancel, size: 20),
+                              label: const Text("Decline", style: TextStyle(fontSize: 16)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.red,
+                                side: const BorderSide(color: Colors.red),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             );
           },
         );
       },
     );
   }
+
 
   Widget _buildReceipts() {
     final uid = currentUser?.uid;
