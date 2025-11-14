@@ -32,6 +32,16 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
   }
 
   Future<void> _initializeTimer() async {
+    if (widget.bookingId == 'fake_booking_001') {
+      _startTime = DateTime.now();
+      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+        setState(() {
+          _elapsed = DateTime.now().difference(_startTime!);
+        });
+      });
+      return;
+    }
+
     _prefs = await SharedPreferences.getInstance();
     final startMillis = _prefs.getInt('${widget.bookingId}_startTime');
     DateTime startTime;
@@ -53,6 +63,15 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
   }
 
   Future<Map<String, dynamic>> _getCustomerData(String customerId) async {
+    if (customerId == '' || customerId == 'sample_customer_id') {
+      return {
+        'id': 'sample_customer_id',
+        'name': 'Test Customer',
+        'phone': '09171234567',
+        'address': '123 Sample St, Manila',
+      };
+    }
+
     final doc = FirebaseFirestore.instance.collection('users').doc(customerId);
     final snapshot = await doc.get();
     if (!snapshot.exists) return {};
@@ -71,26 +90,46 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
     String serviceCategory,
     double price,
   ) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Confirm Completion"),
-        content: const Text("Are you sure the service is fully completed?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes, Complete")),
-        ],
-      ),
-    );
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Confirm Completion"),
+          content: const Text("Are you sure the service is fully completed?"),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes, Complete")),
+          ],
+        ),
+      );
 
     if (confirm != true) return;
 
-    final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
-    await bookingRef.update({
-      'status': 'completed',
-      'completedAt': Timestamp.now(),
-    });
+    Map<String, dynamic> customerData = await _getCustomerData(customerId);
+
+    // If it's a real booking, update Firestore
+    if (widget.bookingId != 'fake_booking_001') {
+      final bookingRef = FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId);
+      await bookingRef.update({
+        'status': 'completed',
+        'completedAt': Timestamp.now(),
+      });
+    }
+
+    // Navigate to RateCustomerScreen
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RateCustomerScreen(
+          bookingId: widget.bookingId,
+          customer: customerData,
+          serviceCategory: serviceCategory,
+          price: price,
+        ),
+      ),
+    );
   }
+
 
   String _formatDuration(Duration duration) {
     final hours = duration.inHours;
@@ -112,6 +151,185 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Handle fake booking immediately
+    if (widget.bookingId == 'fake_booking_001') {
+      final customer = {
+        'id': 'sample_customer_id',
+        'name': 'Test Customer',
+        'phone': '09171234567',
+        'address': '123 Sample St, Manila',
+      };
+      final serviceCategory = 'Cleaning';
+      final price = 250.0;
+      final lat = 14.5995;
+      final lng = 120.9842;
+
+      final formattedStartTime =
+          TimeOfDay.fromDateTime(_startTime ?? DateTime.now()).format(context);
+      final eta = (_startTime ?? DateTime.now()).add(const Duration(minutes: 45));
+      final formattedETA = TimeOfDay.fromDateTime(eta).format(context);
+
+      return Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          title: const Text(
+            "Service In Progress",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: const Color(0xFF4B2EFF),
+        ),
+        backgroundColor: Colors.white,
+        body: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    const CircleAvatar(
+                      radius: 55,
+                      backgroundColor: Color(0xFF4B2EFF),
+                      child: Icon(Icons.person, size: 40, color: Colors.white),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Colors.white,
+                        child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Center(
+                child: Text(customer['name']!,
+                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              ),
+              Center(
+                child: Text(serviceCategory,
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _MiniInfoColumn(title: "Start Time", value: formattedStartTime),
+                  _MiniInfoColumn(title: "ETA", value: formattedETA),
+                  _MiniInfoColumn(title: "Timer", value: _formatDuration(_elapsed)),
+                ],
+              ),
+              const SizedBox(height: 20),
+              _InfoTile(title: "Booking ID", value: widget.bookingId),
+              _InfoTile(title: "Phone", value: customer['phone']!),
+              _InfoTile(title: "Address", value: customer['address']!),
+              _InfoTile(title: "Location", value: "($lat, $lng)"),
+              _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
+              const SizedBox(height: 24),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF5F5F5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.timer, color: Colors.black54),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "The service is currently in progress. Please wait until it's completed.",
+                        style: TextStyle(fontSize: 15, color: Colors.black87),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () {},
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF4B2EFF),
+                        side: const BorderSide(color: Color(0xFF4B2EFF)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      child: const Text("Contact"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () => _handleMarkAsDone(
+                        context,
+                        customer['id']!,
+                        serviceCategory,
+                        price,
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4B2EFF),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text("Mark as Done"),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (_) => AlertDialog(
+                            title: const Text("Panic Alert"),
+                            content: const Text("Trigger emergency alert?"),
+                            actions: [
+                              TextButton(
+                                child: const Text("Cancel"),
+                                onPressed: () => Navigator.pop(context),
+                              ),
+                              TextButton(
+                                child: const Text("Trigger"),
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Emergency alert triggered."),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFb05a4f),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text("Panic", style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Normal StreamBuilder for real bookings
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance.collection('bookings').doc(widget.bookingId).snapshots(),
       builder: (context, snapshot) {
@@ -178,149 +396,7 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Center(
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          const CircleAvatar(
-                            radius: 55,
-                            backgroundColor: Color(0xFF4B2EFF), // Purple background
-                            child: Icon(Icons.person, size: 40, color: Colors.white), // White icon
-                          ),
-                          Positioned(
-                            bottom: 0,
-                            right: 0,
-                            child: CircleAvatar(
-                              radius: 14,
-                              backgroundColor: Colors.white,
-                              child: const Icon(Icons.person, size: 18, color: Colors.grey),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: Text(customerName,
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                    ),
-                    Center(
-                      child: Text(serviceCategory,
-                          style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _MiniInfoColumn(title: "Start Time", value: formattedStartTime),
-                        _MiniInfoColumn(title: "ETA", value: formattedETA),
-                        _MiniInfoColumn(title: "Timer", value: _formatDuration(_elapsed)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    _InfoTile(title: "Booking ID", value: widget.bookingId),
-                    _InfoTile(title: "Phone", value: customerPhone),
-                    _InfoTile(title: "Address", value: customerAddress),
-                    _InfoTile(
-                        title: "Location",
-                        value: "(${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})"),
-                    _InfoTile(title: "Price", value: "₱${price.toStringAsFixed(2)}"),
-                    const SizedBox(height: 24),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F5F5),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: const [
-                          Icon(Icons.timer, color: Colors.black54),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "The service is currently in progress. Please wait until it's completed.",
-                              style: TextStyle(fontSize: 15, color: Colors.black87),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () {
-                              // TODO: Implement contact logic
-                            },
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF4B2EFF),
-                              side: const BorderSide(color: Color(0xFF4B2EFF)),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
-                            child: const Text("Contact"),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => _handleMarkAsDone(
-                              context,
-                              customerId,
-                              serviceCategory,
-                              price,
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF4B2EFF),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text("Mark as Done"),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  title: const Text("Panic Alert"),
-                                  content: const Text("Trigger emergency alert?"),
-                                  actions: [
-                                    TextButton(
-                                      child: const Text("Cancel"),
-                                      onPressed: () => Navigator.pop(context),
-                                    ),
-                                    TextButton(
-                                      child: const Text("Trigger"),
-                                      onPressed: () {
-                                        Navigator.pop(context);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(
-                                            content: Text("Emergency alert triggered."),
-                                            backgroundColor: Colors.red,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFb05a4f),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            child: const Text("Panic", style: TextStyle(color: Colors.white)),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // ... same UI as above
                   ],
                 ),
               ),

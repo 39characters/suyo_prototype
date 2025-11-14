@@ -56,37 +56,41 @@ class _RateCustomerScreenState extends State<RateCustomerScreen>
     final customerId = widget.customer?['id'];
 
     try {
-      await bookingRef.update({
-        'customerRating': _rating,
-        'customerFeedback': _feedbackController.text.trim(),
-        'customerRatedAt': DateTime.now(),
-      });
-
-      if (customerId != null) {
-        final customerRef =
-            FirebaseFirestore.instance.collection('users').doc(customerId);
-
-        await FirebaseFirestore.instance.runTransaction((transaction) async {
-          final snapshot = await transaction.get(customerRef);
-          if (!snapshot.exists) return;
-
-          final data = snapshot.data()!;
-          final currentRating = (data['rating'] ?? 4.5).toDouble();
-          final ratingCount = (data['ratingCount'] ?? 0) as int;
-
-          final newRatingCount = ratingCount + 1;
-          final newRating =
-              ((currentRating * ratingCount) + _rating) / newRatingCount;
-
-          transaction.update(customerRef, {
-            'rating': newRating,
-            'ratingCount': newRatingCount,
-          });
+      // Only update Firestore if not a fake booking
+      if (widget.bookingId != 'fake_booking_001') {
+        await bookingRef.update({
+          'customerRating': _rating,
+          'customerFeedback': _feedbackController.text.trim(),
+          'customerRatedAt': DateTime.now(),
         });
+
+        if (customerId != null) {
+          final customerRef =
+              FirebaseFirestore.instance.collection('users').doc(customerId);
+
+          await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final snapshot = await transaction.get(customerRef);
+            if (!snapshot.exists) return;
+
+            final data = snapshot.data()!;
+            final currentRating = (data['rating'] ?? 4.5).toDouble();
+            final ratingCount = (data['ratingCount'] ?? 0) as int;
+
+            final newRatingCount = ratingCount + 1;
+            final newRating =
+                ((currentRating * ratingCount) + _rating) / newRatingCount;
+
+            transaction.update(customerRef, {
+              'rating': newRating,
+              'ratingCount': newRatingCount,
+            });
+          });
+        }
       }
 
       setState(() => _isSubmitting = false);
 
+      // Navigate to home screen for both real and fake bookings
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -113,6 +117,7 @@ class _RateCustomerScreenState extends State<RateCustomerScreen>
       );
     }
   }
+
 
   Widget _buildStar(int index) {
     return GestureDetector(

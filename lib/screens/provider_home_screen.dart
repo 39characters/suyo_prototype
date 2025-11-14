@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:suyo_prototype/widgets/location_preset_picker.dart';
+import 'package:suyo_prototype/screens/provider_in_progress_screen.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
   const ProviderHomeScreen({super.key});
@@ -11,6 +12,28 @@ class ProviderHomeScreen extends StatefulWidget {
   @override
   _ProviderHomeScreenState createState() => _ProviderHomeScreenState();
 }
+
+class FakeBooking {
+  static Map<String, dynamic> sample() {
+    return {
+      'serviceCategory': 'survey',
+      'price': 150.0,
+      'customerId': 'sample_customer_id',
+      'location': {
+        'lat': 14.5995,
+        'lng': 120.9842,
+        'label': 'Sample Location',
+        'name': 'John Doe',
+        'contactNumber': '09171234567',
+        'address': '123 Sample St, Manila',
+      },
+      'status': 'pending',
+      'description': 'Sample survey booking for testing',
+      'fake': true, // optional flag to identify it
+    };
+  }
+}
+
 
 class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   int _selectedTab = 0;
@@ -21,6 +44,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   static Map<String, dynamic>? _cachedAnalyticsData; // Cache for analytics
   double? _selectedLat; // State variable for latitude
   double? _selectedLng; // State variable for longitude
+
+  bool _isTesting = true; // Set true to inject a fake booking for testing
 
   @override
   void initState() {
@@ -152,38 +177,34 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
     return '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}'.trim();
   }
 
-  Future<void> _acceptBooking(String bookingId, Map<String, dynamic> job) async {
+  void _acceptBooking(String bookingId, Map<String, dynamic> job) {
     final uid = currentUser?.uid;
+    if (job.containsKey('fake')) {
+      // Navigate directly for the fake job
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProviderInProgressScreen(
+            bookingId: 'fake_booking_001', // can be any string
+          ),
+        ),
+      );
+      return;
+    }
+
     if (uid == null) return;
 
-    try {
-      final providerSnapshot = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final providerData = providerSnapshot.data();
-
-      final providerName = providerData?['businessName'] ??
-          "${providerData?['firstName'] ?? ''} ${providerData?['lastName'] ?? ''}".trim();
-
-      await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
-        'status': 'accepted',
-        'providerId': uid,
-        'providerAcceptedAt': Timestamp.now(),
-        'provider': {
-          'id': uid,
-          'name': providerName,
-          'photoUrl': providerData?['photoUrl'],
-        },
-      });
-
-      if (!mounted) return;
-
-      Navigator.pushNamed(
+    FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId)
+        .update({'providerId': uid, 'status': 'in_progress'}).then((_) {
+      Navigator.push(
         context,
-        '/providerInProgress',
-        arguments: {'bookingId': bookingId},
+        MaterialPageRoute(
+          builder: (_) => ProviderInProgressScreen(bookingId: bookingId),
+        ),
       );
-    } catch (e) {
-      print("❌ Error accepting job: $e");
-    }
+    });
   }
 
   Future<void> _deleteUserData() async {
@@ -231,7 +252,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
   Widget _buildJobList() {
     final uid = currentUser?.uid;
     if (uid == null) {
-      return const Center(child: Text("User not signed in", style: TextStyle(fontSize: 18)));
+      return const Center(
+          child: Text("User not signed in", style: TextStyle(fontSize: 18)));
     }
 
     // Load provider category once
@@ -239,10 +261,12 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
       future: FirebaseFirestore.instance.collection('users').doc(uid).get(),
       builder: (context, providerSnapshot) {
         if (!providerSnapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
+          return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
         }
 
-        final providerData = providerSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final providerData =
+            providerSnapshot.data!.data() as Map<String, dynamic>? ?? {};
         final providerCategory = providerData['serviceCategory'] ?? '';
 
         // StreamBuilder for bookings
@@ -253,7 +277,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
               .snapshots(),
           builder: (context, snapshot) {
             if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
+              return const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF4B2EFF)));
             }
 
             // Filter jobs for this provider
@@ -265,17 +290,43 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                   assignedProvider == uid;
             }).toList();
 
-            if (jobs.isEmpty) {
-              return const Center(child: Text("No new jobs", style: TextStyle(fontSize: 18)));
-            }
+            // --- Add a sample fake booking for testing ---
+            final fakeJob = {
+              'serviceCategory': 'Survey',
+              'price': 0.0,
+              'customerId': 'sample_customer_id',
+              'location': {'lat': 14.5995, 'lng': 120.9842},
+              'fake': true, // optional flag
+            };
+
+            final allJobs = [
+              ...jobs,
+              {
+                'serviceCategory': 'Survey',
+                'price': 0.0,
+                'customerId': 'sample_customer_id',
+                'location': {'lat': 14.5995, 'lng': 120.9842},
+                'fake': true, // optional flag
+              }
+            ];
 
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: jobs.length,
+              itemCount: allJobs.length,
               itemBuilder: (context, index) {
-                final doc = jobs[index];
-                final job = doc.data() as Map<String, dynamic>;
-                final bookingId = doc.id;
+                final doc = allJobs[index];
+                Map<String, dynamic> job;
+
+                if (doc is QueryDocumentSnapshot) {
+                  job = doc.data() as Map<String, dynamic>;
+                } else if (doc is Map<String, dynamic>) {
+                  job = doc;
+                } else {
+                  // fallback for safety
+                  job = {};
+                }
+
+                final bookingId = doc is QueryDocumentSnapshot ? doc.id : 'FAKE_JOB';
                 final price = (job['price'] ?? 0).toDouble();
                 final loc = job['location'] as Map<String, dynamic>?;
                 final lat = loc?['lat']?.toStringAsFixed(6) ?? 'N/A';
@@ -293,7 +344,8 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                       children: [
                         Text(
                           "$service – ₱${price.toStringAsFixed(2)}",
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          style:
+                              const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 8),
                         FutureBuilder<String>(
@@ -302,11 +354,13 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                               : Future.value('Unknown'),
                           builder: (_, snap) {
                             final name = snap.data ?? '...';
-                            return Text("Customer: $name", style: const TextStyle(fontSize: 16));
+                            return Text("Customer: $name",
+                                style: const TextStyle(fontSize: 16));
                           },
                         ),
                         const SizedBox(height: 8),
-                        Text("Location: $lat, $lng", style: const TextStyle(fontSize: 16)),
+                        Text("Location: $lat, $lng",
+                            style: const TextStyle(fontSize: 16)),
                         const SizedBox(height: 16),
                         Row(
                           children: [
@@ -317,23 +371,28 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF4B2EFF),
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
                             const SizedBox(width: 8),
                             OutlinedButton.icon(
-                              onPressed: () => FirebaseFirestore.instance
-                                  .collection('bookings')
-                                  .doc(bookingId)
-                                  .update({'status': 'declined'}),
+                              onPressed: () {
+                                if (job.containsKey('fake')) return; // skip DB update
+                                FirebaseFirestore.instance
+                                    .collection('bookings')
+                                    .doc(bookingId)
+                                    .update({'status': 'declined'});
+                              },
                               icon: const Icon(Icons.cancel, size: 20),
                               label: const Text("Decline", style: TextStyle(fontSize: 16)),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.red,
                                 side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 12),
                                 shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8)),
                               ),
@@ -351,6 +410,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
       },
     );
   }
+
 
 
   Widget _buildReceipts() {
