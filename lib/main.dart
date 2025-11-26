@@ -42,7 +42,7 @@ class SuyoApp extends StatelessWidget {
         '/home': (context) => InternetGate(child: PermissionGate(child: HomeScreen())),
         '/register': (context) => InternetGate(child: PermissionGate(child: RegisterScreen())),
         '/providerHome': (context) => InternetGate(child: PermissionGate(child: ProviderHomeScreen())),
-
+        '/login': (context) => LoginScreen(),
         '/pending': (context) {
           final args = ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>?;
           return args == null
