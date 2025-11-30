@@ -32,20 +32,20 @@ class ServiceListCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 250,
-            height: 250,
-            padding: const EdgeInsets.all(12),
+            width: 120,
+            height: 120,
+            padding: const EdgeInsets.all(8),
             child: imageAsset != null
                 ? ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.asset(
                       imageAsset!,
                       fit: BoxFit.cover,
-                      width: 226,
-                      height: 226,
+                      width: 104,
+                      height: 104,
                     ),
                   )
-                : Icon(icon, size: 140, color: borderColor),
+                : Icon(icon, size: 56, color: borderColor),
           ),
           const SizedBox(width: 12),
           Expanded(

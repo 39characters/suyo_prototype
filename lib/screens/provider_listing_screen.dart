@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../widgets/provider_card.dart';
+import '../widgets/booking_modal.dart';
 
 class ProviderListingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -68,6 +69,21 @@ class _ProviderListingScreenState extends State<ProviderListingScreen> {
         lng = (location['lng'] as num).toDouble();
       }
 
+      // attempt to extract a numeric price per kg from known fields
+      double? pricePerKg;
+      if (data['pricePerKg'] != null) {
+        pricePerKg = (data['pricePerKg'] as num).toDouble();
+      } else if (data['price'] != null) {
+        pricePerKg = (data['price'] as num).toDouble();
+      } else if (data['priceText'] != null && (data['priceText'] as String).isNotEmpty) {
+        final txt = data['priceText'] as String;
+        final match = RegExp(r"(\d+[\.,]?\d*)").firstMatch(txt.replaceAll('₱', '').replaceAll('PHP', ''));
+        if (match != null) {
+          final parsed = double.tryParse(match.group(0)!.replaceAll(',', ''));
+          pricePerKg = parsed;
+        }
+      }
+
       return {
         'id': doc.id,
         'name': data['businessName'] ?? '${data['firstName'] ?? ''} ${data['lastName'] ?? ''}',
@@ -75,8 +91,10 @@ class _ProviderListingScreenState extends State<ProviderListingScreen> {
         'ratingCount': data['ratingCount'] ?? 0,
         'lat': lat,
         'lng': lng,
-        'city': data['city'] ?? '',
+        // provide a placeholder city when missing
+        'city': (data['city'] as String?)?.isNotEmpty == true ? data['city'] : '—',
         'priceText': data['priceText'] ?? '',
+        'pricePerKg': pricePerKg,
       };
     }).toList();
 
@@ -105,7 +123,8 @@ class _ProviderListingScreenState extends State<ProviderListingScreen> {
       }
       return {
         ...p,
-        'distance': distance.toStringAsFixed(1),
+        // use two-decimal distance formatting (matches booking screen calculation)
+        'distance': distance.toStringAsFixed(2),
         'numericDistance': distance,
       };
     }).toList();
@@ -196,7 +215,16 @@ class _ProviderListingScreenState extends State<ProviderListingScreen> {
                                 provider: p,
                                 highlighted: false,
                                 onSelect: () {
-                                  Navigator.pop(context, p);
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) => BookingModal(
+                                      provider: p,
+                                      serviceCategory: widget.serviceCategory,
+                                      basePrice: p['pricePerKg'] ?? widget.price ?? 0.0,
+                                    ),
+                                  );
                                 },
                                 onViewRatings: () => _showRatings(context, p),
                               );

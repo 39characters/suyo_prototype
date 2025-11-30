@@ -13,8 +13,9 @@ class ProviderCard extends StatelessWidget {
     final name = provider['name'] ?? 'Unnamed Provider';
     final rating = (provider['rating'] ?? 0.0).toDouble();
     final distance = provider['distance'] ?? '';
-    final city = provider['city'] ?? '';
+    final city = (provider['city'] as String?)?.isNotEmpty == true ? provider['city'] as String : '—';
     final priceText = provider['priceText'] ?? '';
+    final pricePerKg = provider['pricePerKg'];
     final ratingCount = provider['ratingCount'] ?? 0;
 
     return Container(
@@ -97,11 +98,16 @@ class ProviderCard extends StatelessWidget {
                 style: const TextStyle(fontSize: 12, color: Colors.black54, fontWeight: FontWeight.w500),
               ),
             ),
-          // Price
+          // Price: prefer explicit priceText, otherwise show parsed numeric price if available
           if (priceText.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(priceText, style: const TextStyle(color: Color(0xFF4B2DFF), fontWeight: FontWeight.w700, fontSize: 12)),
+            )
+          else if (pricePerKg != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text('PHP ${ (pricePerKg as num).toDouble().toStringAsFixed(2) } per kg', style: const TextStyle(color: Color(0xFF4B2DFF), fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           // Button
           SizedBox(
