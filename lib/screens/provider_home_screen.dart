@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:suyo_prototype/widgets/location_preset_picker.dart';
+import 'package:suyo_prototype/widgets/bottom_nav_bar.dart';
 
 class ProviderHomeScreen extends StatefulWidget {
   const ProviderHomeScreen({super.key});
@@ -778,34 +779,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
                 ],
               ),
             ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedTab,
-        onTap: _onTabTapped,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF4B2EFF),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-        unselectedLabelStyle: const TextStyle(fontSize: 14),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.assignment, size: 28),
-            label: 'Jobs',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.receipt_long, size: 28),
-            label: 'Receipts',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart, size: 28),
-            label: 'Analytics',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline, size: 28),
-            label: 'Profile',
-          ),
-        ],
-      ),
+      bottomNavigationBar: BottomNavBar(currentIndex: _selectedTab, onTap: _onTabTapped),
     );
   }
 }

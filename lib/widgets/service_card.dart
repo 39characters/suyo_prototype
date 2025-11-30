@@ -20,17 +20,17 @@ class ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color iconColor = const Color(0xFF4B2EFF);
-    final Color textColor = const Color(0xFF4B2EFF);
+    final Color iconColor = const Color(0xFF4B2DFF);
+    final Color textColor = const Color(0xFF202020);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
+        decoration: BoxDecoration(
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isSelected ? const Color(0xFF4B2EFF) : Colors.grey[300]!,
+          color: isSelected ? const Color(0xFF4B2DFF) : Colors.grey[300]!,
           width: isSelected ? 2 : 1,
         ),
         boxShadow: [
