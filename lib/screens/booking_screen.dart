@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'customer_pending_screen.dart';
 import 'package:suyo_prototype/widgets/location_preset_picker.dart';
+import 'provider_listing_screen.dart';
 
 class BookingScreen extends StatefulWidget {
   final String serviceCategory;
@@ -375,6 +376,25 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                           ],
                         ),
                       ),
+                      actions: [
+                        IconButton(
+                          icon: const Icon(Icons.list, color: Colors.white),
+                          tooltip: 'View providers list',
+                          onPressed: () async {
+                            final result = await Navigator.push<Map<String, dynamic>>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProviderListingScreen(serviceCategory: widget.serviceCategory, price: widget.price),
+                              ),
+                            );
+                            if (result != null) {
+                              setState(() {
+                                _selectedProvider = result;
+                              });
+                            }
+                          },
+                        ),
+                      ],
                       centerTitle: true,
                     ),
                   ),

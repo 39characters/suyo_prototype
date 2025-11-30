@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../widgets/service_details_bottom_sheet.dart';
 import '../widgets/service_list_card.dart';
 import '../widgets/bottom_nav_bar.dart';
+import 'provider_listing_screen.dart';
  
 
 class HomeScreen extends StatefulWidget {
@@ -316,13 +317,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   onSelect: disabled
                       ? null
                       : () {
-                          showModalBottomSheet(
-                            context: context,
-                            shape: const RoundedRectangleBorder(
-                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProviderListingScreen(
+                                serviceCategory: service['label'],
+                                price: (service['price'] as num?)?.toDouble() ?? 0.0,
+                              ),
                             ),
-                            backgroundColor: Colors.white,
-                            builder: (_) => ServiceDetailsBottomSheet(service: service),
                           );
                         },
                 ),
