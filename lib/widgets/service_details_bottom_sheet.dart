@@ -5,7 +5,7 @@ import '../screens/errand_booking_screen.dart';
 class ServiceDetailsBottomSheet extends StatelessWidget {
   final Map<String, dynamic> service;
 
-  const ServiceDetailsBottomSheet({Key? key, required this.service}) : super(key: key);
+  const ServiceDetailsBottomSheet({super.key, required this.service});
 
   @override
   Widget build(BuildContext context) {

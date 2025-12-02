@@ -6,11 +6,11 @@ class BookingModal extends StatefulWidget {
   final double basePrice;
 
   const BookingModal({
-    Key? key,
+    super.key,
     required this.provider,
     required this.serviceCategory,
     required this.basePrice,
-  }) : super(key: key);
+  });
 
   @override
   State<BookingModal> createState() => _BookingModalState();

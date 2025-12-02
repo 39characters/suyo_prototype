@@ -10,12 +10,12 @@ class RateCustomerScreen extends StatefulWidget {
   final double price;
 
   const RateCustomerScreen({
-    Key? key,
+    super.key,
     required this.bookingId,
     required this.customer,
     required this.serviceCategory,
     required this.price,
-  }) : super(key: key);
+  });
 
   @override
   State<RateCustomerScreen> createState() => _RateCustomerScreenState();

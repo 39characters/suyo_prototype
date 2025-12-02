@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
 }
@@ -50,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final parts = service.split(' ');
     if (parts.length < 2) return [TextSpan(text: service)];
     return [
-      TextSpan(text: parts[0] + ' ', style: TextStyle(fontWeight: FontWeight.bold)),
+      TextSpan(text: '${parts[0]} ', style: TextStyle(fontWeight: FontWeight.bold)),
       TextSpan(text: parts.sublist(1).join(' ')),
     ];
   }
@@ -190,7 +192,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
             return AlertDialog(
               title: Text("SUYO Privacy Policy - $_userType"),
-              content: Container(
+              content: SizedBox(
                 height: 300,
                 width: double.infinity,
                 child: SingleChildScrollView(
@@ -311,8 +313,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // Firebase Auth specific errors
       print("FirebaseAuthException caught: ${e.code} - ${e.message}");
       String message = 'Registration failed';
-      if (e.code == 'email-already-in-use') message = 'Email already in use';
-      else if (e.code == 'weak-password') message = 'Password is too weak';
+      if (e.code == 'email-already-in-use') {
+        message = 'Email already in use';
+      } else if (e.code == 'weak-password') message = 'Password is too weak';
       else if (e.code == 'invalid-email') message = 'Invalid email format';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e, stackTrace) {
@@ -556,12 +559,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       value: _privacyPolicyChecked,
                       activeColor: Color(0xFF4B2EFF),
                       onChanged: (value) {
-                        if (value == true) _showPrivacyPolicy();
-                        else
+                        if (value == true) {
+                          _showPrivacyPolicy();
+                        } else {
                           setState(() {
                             _privacyPolicyChecked = false;
                             _hasReadPrivacyPolicy = false;
                           });
+                        }
                       },
                     ),
                     GestureDetector(

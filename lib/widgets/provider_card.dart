@@ -6,7 +6,7 @@ class ProviderCard extends StatelessWidget {
   final void Function()? onSelect;
   final void Function()? onViewRatings;
 
-  const ProviderCard({Key? key, required this.provider, this.highlighted = false, this.onSelect, this.onViewRatings}) : super(key: key);
+  const ProviderCard({super.key, required this.provider, this.highlighted = false, this.onSelect, this.onViewRatings});
 
   @override
   Widget build(BuildContext context) {

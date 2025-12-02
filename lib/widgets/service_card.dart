@@ -9,14 +9,14 @@ class ServiceCard extends StatelessWidget {
   final Color backgroundColor;
 
   const ServiceCard({
-    Key? key,
+    super.key,
     required this.label,
     required this.icon,
     this.isSelected = false,
     this.iconSize = 80,
     this.textStyle = const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
     this.backgroundColor = Colors.white,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

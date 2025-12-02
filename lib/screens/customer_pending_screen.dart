@@ -14,14 +14,14 @@ class CustomerPendingScreen extends StatefulWidget {
   final String customerId;
 
   const CustomerPendingScreen({
-    Key? key,
+    super.key,
     required this.provider,
     required this.serviceCategory,
     required this.price,
     required this.location,
     required this.bookingId,
     required this.customerId,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomerPendingScreen> createState() => _CustomerPendingScreenState();

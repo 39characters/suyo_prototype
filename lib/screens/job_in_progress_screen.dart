@@ -15,7 +15,7 @@ class JobInProgressScreen extends StatefulWidget {
   final Map<String, dynamic> location;
 
   const JobInProgressScreen({
-    Key? key,
+    super.key,
     required this.bookingId,
     required this.provider,
     required this.serviceCategory,
@@ -23,7 +23,7 @@ class JobInProgressScreen extends StatefulWidget {
     required this.startedAt,
     required this.eta,
     required this.location,
-  }) : super(key: key);
+  });
 
   @override
   State<JobInProgressScreen> createState() => _JobInProgressScreenState();

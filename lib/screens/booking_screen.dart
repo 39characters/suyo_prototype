@@ -370,7 +370,7 @@ class _BookingScreenState extends State<BookingScreen> with SingleTickerProvider
                           children: [
                             const TextSpan(text: 'Booking for '),
                             TextSpan(
-                              text: "${widget.serviceCategory}",
+                              text: widget.serviceCategory,
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],

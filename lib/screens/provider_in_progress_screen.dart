@@ -7,7 +7,7 @@ import 'rate_customer_screen.dart';
 class ProviderInProgressScreen extends StatefulWidget {
   final String bookingId;
 
-  const ProviderInProgressScreen({Key? key, required this.bookingId}) : super(key: key);
+  const ProviderInProgressScreen({super.key, required this.bookingId});
 
   @override
   State<ProviderInProgressScreen> createState() => _ProviderInProgressScreenState();
@@ -160,7 +160,7 @@ class _ProviderInProgressScreenState extends State<ProviderInProgressScreen>
             final formattedStartTime = _startTime != null
                 ? TimeOfDay.fromDateTime(_startTime!).format(context)
                 : '--:--';
-            final eta = _startTime != null ? _startTime!.add(const Duration(minutes: 45)) : null;
+            final eta = _startTime?.add(const Duration(minutes: 45));
             final formattedETA = eta != null ? TimeOfDay.fromDateTime(eta).format(context) : '--:--';
 
             return Scaffold(

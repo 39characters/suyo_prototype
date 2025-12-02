@@ -10,7 +10,7 @@ class ProviderListingScreen extends StatefulWidget {
   final String serviceCategory;
   final double? price;
 
-  const ProviderListingScreen({Key? key, required this.serviceCategory, this.price}) : super(key: key);
+  const ProviderListingScreen({super.key, required this.serviceCategory, this.price});
 
   @override
   State<ProviderListingScreen> createState() => _ProviderListingScreenState();

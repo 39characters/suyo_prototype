@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-import '../widgets/service_details_bottom_sheet.dart';
 import '../widgets/service_list_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 import 'provider_listing_screen.dart';
@@ -209,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> _pages = [
+    final List<Widget> pages = [
           _buildHomeContent(),
           _buildActivity(),
           _buildBookings(),
@@ -220,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       backgroundColor: Colors.grey[100],
       body: FadeTransition(
         opacity: _fadeAnimation,
-        child: _pages[_selectedTab],
+        child: pages[_selectedTab],
       ),
       bottomNavigationBar: BottomNavBar(currentIndex: _selectedTab, onTap: _onTabTapped),
     );
@@ -605,9 +604,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _statCard('${totalBookings.toString()}', 'Bookings'),
+                  _statCard(totalBookings.toString(), 'Bookings'),
                   _statCard('${rating.toStringAsFixed(1)}', 'Rating'),
-                  _statCard('${ratingCount.toString()}', 'Reviews'),
+                  _statCard(ratingCount.toString(), 'Reviews'),
                 ],
               ),
 

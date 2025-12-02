@@ -7,7 +7,7 @@ class ServiceListCard extends StatelessWidget {
   final String? imageAsset;
   final VoidCallback? onSelect;
 
-  const ServiceListCard({Key? key, required this.title, required this.description, required this.icon, this.imageAsset, this.onSelect}) : super(key: key);
+  const ServiceListCard({super.key, required this.title, required this.description, required this.icon, this.imageAsset, this.onSelect});
 
   @override
   Widget build(BuildContext context) {

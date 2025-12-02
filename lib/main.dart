@@ -5,7 +5,6 @@ import 'package:permission_handler/permission_handler.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
-import 'screens/booking_screen.dart';
 import 'screens/job_in_progress_screen.dart';
 import 'screens/rating_screen.dart';
 import 'screens/rate_customer_screen.dart';

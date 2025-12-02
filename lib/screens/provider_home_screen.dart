@@ -627,9 +627,7 @@ class _ProviderHomeScreenState extends State<ProviderHomeScreen> {
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>? ?? {};
-        final fullName = data['businessName'] != null
-            ? data['businessName']
-            : "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
+        final fullName = data['businessName'] ?? "${data['firstName'] ?? ''} ${data['lastName'] ?? ''}".trim();
         final profession = data['serviceCategory'] ?? "No profession listed";
         final rating = (data['rating'] ?? 0).toDouble();
         final ratingCount = data['ratingCount'] ?? 0;
